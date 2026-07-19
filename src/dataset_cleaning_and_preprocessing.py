@@ -31,22 +31,21 @@ def get_missing_percentages_per_row(df):
     return (df.isnull().sum(axis=1) / len(df.columns)) * 100
 
 
-
 def missing_values_removal(df: pd.DataFrame) -> pd.DataFrame:
     """Remove columns and rows with more than 70% missing values."""
     # 1. Delete columns with missing values > 70% (based on Huang, Y., Zhou, Y., Chen, J., & Wu, D. (2024))
     pct_columns = get_missing_percentages_per_column(df)
-    print(pct_columns)
     columns_to_keep = pct_columns[pct_columns <= 70].index
-    df_cleaned_columns = df[columns_to_keep]
+    df_step1 = df[columns_to_keep]
 
     # 2. Delete lines with missing values > 70% (based on Gamazo & Martínez-Abad (2020), Huang, Y., Zhou, Y., Chen, J., & Wu, D. (2024))
-    pct_rows = get_missing_percentages_per_row(df_cleaned_columns)
-    df_cleaned = df_cleaned_columns[pct_rows <= 70]
+    pct_rows = get_missing_percentages_per_row(df_step1)
+    df_step2 = df_step1[pct_rows <= 70]
+
+    # 3. Delete lines with missing value in target variable (PV1MATH)
+    df_cleaned = df_step2.dropna(subset=['PV1MATH'])
 
     return df_cleaned
     
-#CLEANING
-
-
+    
 #NORMALISATION, SCALING ET TOUT çA
