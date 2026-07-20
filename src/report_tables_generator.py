@@ -18,7 +18,6 @@ def generate_cleaning_summary_table(df_raw: pd.DataFrame, df_cleaned: pd.DataFra
     
     deleted_cols = df_raw.columns.difference(df_cleaned.columns)
 
-    # Correction : Si aucune colonne n'est supprimée, on ajoute une ligne informative
     if len(deleted_cols) == 0:
         summary_data.append({
             'Type': 'Columns',
@@ -28,7 +27,6 @@ def generate_cleaning_summary_table(df_raw: pd.DataFrame, df_cleaned: pd.DataFra
         })
     else:
         for col in deleted_cols:
-            # Récupération sécurisée du pourcentage (conversion en float pour le formatage)
             try:
                 pct_val = float(pct_columns_initial[col])
             except (KeyError, ValueError):

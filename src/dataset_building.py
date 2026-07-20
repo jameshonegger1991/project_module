@@ -125,7 +125,7 @@ def build_swiss_merged_dataset():
     print(f"Swiss merged dataset saved to: {data_path} ✔")
    
 
-def reduced_swiss_dataset():
+def reduced_swiss_dataset()-> pd.DataFrame:
     """
     Build the reduced swiss dataset (19 features) used in the project.
     Loads the swiss_merged_dataset.csv from the data directory
@@ -136,8 +136,7 @@ def reduced_swiss_dataset():
     
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
-        print("Please run build_swiss_merged_dataset() first.")
-        return None
+        reduced_swiss_dataset()
     
     print(f"Loading Swiss merged dataset from: {file_path}")
     df = pd.read_csv(file_path)
@@ -190,3 +189,5 @@ def reduced_swiss_dataset():
     src_path = os.path.join("src", "swiss_reduced_dataset.csv")
     df_reduced.to_csv(src_path, index=False)
     print(f"Swiss reduced dataset saved to: {src_path} ✔")
+
+    return df_reduced

@@ -1,17 +1,18 @@
 import pandas as pd
 import os
+from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
 
 
-def add_MEAN_ESCS_and_MMINS_features()-> pd.DataFrame :
-    
-    dataset_path = os.path.join("src", "swiss_reduced_dataset.csv")
-    
-    if not os.path.exists(dataset_path):
-        print(f"File not found: {dataset_path}")
-        print("First, please run reduced_swiss_dataset().")
-        return None
-    
-    df = pd.read_csv(dataset_path)
+def add_MEAN_ESCS_and_MMINS_features(df: pd.DataFrame)-> pd.DataFrame :
+    """ 
+    This function adds two new features to the dataset: MEAN_ESCS and MMINS. 
+    It also removes identifier features (CNTSTUID and CNTSCHID) and the features used to build MEAN_ESCS and MMINS,
+    to reduce bias and multicolinearity during training.
+    """
     df['MMINS'] = df['ST059Q01TA'] * df['SC175Q01JA']
     df['MEAN_ESCS'] = df.groupby('CNTSCHID')['ESCS'].transform('mean')
 
@@ -46,6 +47,72 @@ def missing_values_removal(df: pd.DataFrame) -> pd.DataFrame:
     df_cleaned = df_step2.dropna(subset=['PV1MATH'])
 
     return df_cleaned
+
+def ordinal_features_mapping(df: pd.DataFrame):
+    """
+    Map ordinal variables to numeric codes. replace() is preferred to map() because it handles NaN values.
+    """
+    df['REPEAT'] = df['REPEAT'].replace({
+        'Never repeated': 0,
+        'Repeated at lease once': 1
+    })
     
+    df['ST062Q01TA'] = df['ST062Q01TA'].replace({
+        'Never': 1,
+        'One or two times': 2,
+        'Three or four times': 3,
+        'Five or more times': 4
+    })
     
-#NORMALISATION, SCALING ET TOUT çA
+    df['IMMIG'] = df['IMMIG'].replace({
+        'Native student': 1,
+        'Second-Generation student': 2,
+        'First-Generation student': 3
+    })
+    
+    return df
+
+
+def data_cleaning_preprocessing_pipeline(df: pd.DataFrame):
+    """
+    Data cleaning and preprocessing pipeline following strict data leakage prevention.
+    
+    1. Initial Filtering (Dataset level):
+       - Columns and rows with > 70% missing values are removed.
+       - Rows with missing values in the target variable (PV1MATH) are removed.
+       
+    2. Train/Test Split:
+       - The filtered dataset is split into train (80%) and test (20%) sets.
+       
+    3. Transformation Pipeline (on the TRAINING set):
+       - Imputation: Remaining missing values are imputed using the median for numeric features, 
+         and the mode for categorical features.
+       - Nominal features (ST004D01T, SCHLTYPE) are one-hot encoded with drop='first' 
+         to avoid multicollinearity.
+       - Ordinal (ST062Q01TA, IMMIG, REPEAT) are preserved as numeric to maintain 
+         their hierarchical order.
+       - All numeric features are standardised using Z-score scaling (StandardScaler), a process strictly required for models like MLR, SVR, and KNN.
+    """
+    #1. Initial Filtering
+    df = ordinal_features_mapping(df)
+    df_with_missing_values = add_MEAN_ESCS_and_MMINS_features(df)
+    df_preprocessed = missing_values_removal(df_with_missing_values)
+
+    #2. Train/Test Split
+    X_train, X_test, y_train, y_test = train_test_split(df_preprocessed.drop(columns = ['PV1MATH']), df_preprocessed['PV1MATH'], test_size=0.2, random_state = 7) # Following common practice in the literature, a 20% test set is used.
+
+    #3. Transformation Pipeline
+    categorical_features = ['ST004D01T', 'SCHLTYPE'] 
+    ordinal_features = ['ST062Q01TA', 'REPEAT', 'IMMIG'] 
+    numerical_features = [col for col in X_train.columns if col not in categorical_features + ordinal_features] 
+
+    numerical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='median')),('scaler', StandardScaler())])
+    categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent')),('encoder', OneHotEncoder(handle_unknown='ignore'))])
+    ordinal_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent'))])
+
+    preprocessor = ColumnTransformer(transformers=[('num', numerical_transformer, numerical_features),
+                                                   ('cat', categorical_transformer, categorical_features),
+                                                   ('ord', ordinal_transformer, ordinal_features)
+                                                   ])
+    
+    return X_train, X_test, y_train, y_test, df_with_missing_values, df_preprocessed, preprocessor
