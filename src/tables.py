@@ -67,26 +67,64 @@ def generate_missing_values_report(df: pd.DataFrame, threshold: float, title: st
     print(f"Overall missing %: {(total_missing / total_cells) * 100:.1f}%")
     print("=" * 80 + "\n")
 
-def display_data_types(df: pd.DataFrame, title: str) -> None:
+
+def get_descriptive_statistics(df: pd.DataFrame, title: str) -> None:
     """
-    Display the data types of all columns in a DataFrame.
-    
-    Parameters:
-        df: DataFrame to analyse
-        title: Title for the display (default: "Data Types")
+    Display descriptive statistics for a DataFrame.
+    It includes shape, descriptive stats, head, info, and skewness.
     """
-    print("=" * 80)
-    print(f"{title}")
-    print("=" * 80)
     
+    print("=" * 80)
+    print(title)
+    print("=" * 80)
+    print()
+    
+    # 1. Shape
+    print("=" * 80)
+    print("SHAPE OF THE DATASET")
+    print("=" * 80)
+    print()
+    print(df.shape)
+    print()
+
+    # 2. Head
+    print("=" * 80)
+    print("HEAD OF THE DATASET")
+    print("=" * 80)
+    print()
+    print(df.head())
+    print()
+    
+    # 3. Descriptive statistics
+    print("=" * 80)
+    print("DESCRIPTIVE STATISTICS")
+    print("=" * 80)
+    print()
+    numeric_df = df.select_dtypes(include=['float64', 'int64'])
+    print(numeric_df.describe())
+    print()
+    
+    # 4. Info
+    print("=" * 80)
+    print("DATA TYPES")
+    print("=" * 80)
+    print()
     type_summary = pd.DataFrame({
         'Column': df.columns,
         'Type': df.dtypes.values,
         'Non-Null': df.count().values,
         'Null %': (df.isnull().sum() / len(df) * 100).round(2).values
     })
-    
     print(type_summary.to_string(index=False))
+    print()
+    
+    # 5. Skewness
+    print("=" * 80)
+    print("SKEWNESS OF THE DATASET")
+    print("=" * 80)
+    print()
+    print(numeric_df.skew())
+    print()
+    
     print("=" * 80 + "\n")
-
 
