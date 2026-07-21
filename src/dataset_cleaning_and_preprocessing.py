@@ -5,6 +5,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import PowerTransformer
 import numpy as np
 
 
@@ -21,7 +22,6 @@ def add_MEAN_ESCS_and_MMINS_features(df: pd.DataFrame)-> pd.DataFrame :
     df = df.drop(columns=['ESCS', 'ST059Q01TA', 'SC175Q01JA', 'CNTSCHID','CNTSTUID'])
     
     return df
-
 
 def get_missing_percentages_per_column(df):
     """Compute the percentage of missing values for each column in a DataFrame."""
@@ -85,12 +85,26 @@ def data_preprocessing_pipeline(df: pd.DataFrame, threshold: float):
          to avoid multicollinearity.
        - Ordinal (ST062Q01TA, IMMIG, REPEAT) are preserved as numeric to maintain 
          their hierarchical order.
-       - All numeric features are standardised using Z-score scaling (StandardScaler), a process strictly required for models like MLR, SVR, and KNN.
+       - All numeric features are transformed using Yeo-Johnson to correct skewness, then standardised using Z-score scaling (StandardScaler). This ensures comparability across all models (including MLR, SVR, and KNN).
     """
     #1. Initial Filtering
+
+    # dataset features correspond to the ones described in project report (MEAN_ESCS + MMINS added, intermediate/identifier features removed)
     df_raw_with_correct_features = add_MEAN_ESCS_and_MMINS_features(df)
+
+    # Ordinal features (IMMIG, 'ST062Q01TA', 'REPEAT') are mapped in numeric format to preserve order and scale.
     df_mapped = ordinal_features_mapping(df_raw_with_correct_features.copy())
+
+    # Rows with no PV1MATH value are removed. Rows and columns >=70% missing values are removed.
     df_preprocessed = missing_values_removal(df_mapped, threshold)
+
+    # "MMINS" presents a very strong skewness. To avoid excessive outliers (implausible values), MMINS is capped at 450 minutes.
+    # This threshold is based on the structure of the Swiss education system:
+    # a standard mathematics period lasts 45 minutes, with a maximum of approximately 10 periods per week.
+    # This includes the compulsory mathematics course (5 periods for every student) plus the optional "Mathematics and Physics" course (4-5 additional periods).
+    # SOURCE: https://edk.ch/en/education-system 
+    df_preprocessed['MMINS'] = df_preprocessed['MMINS'].clip(upper=450)
+    
 
     #2. Train/Test Split
     X_train, X_test, y_train, y_test = train_test_split(df_preprocessed.drop(columns = ['PV1MATH']), df_preprocessed['PV1MATH'], test_size=0.2, random_state = 7) # Following common practice in the literature, a 20% test set is used.
@@ -100,8 +114,12 @@ def data_preprocessing_pipeline(df: pd.DataFrame, threshold: float):
     ordinal_features = ['ST062Q01TA', 'REPEAT', 'IMMIG'] 
     numerical_features = [col for col in X_train.columns if col not in categorical_features + ordinal_features] 
 
-    numerical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='median')),('scaler', StandardScaler())])
-    categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent')),('encoder', OneHotEncoder(handle_unknown='ignore'))])
+    # Yeo-Johnson corrects skewness in numerical features ('PAREDINT', 'PROATCE', 'STUBEHA') to satisfy 
+    # the normality assumption of MLR and SVR. StandardScaler then ensures equal scaling across 
+    # all features, which is required for distance-based models. 
+    # A single pipeline is applied to all models to maintain valid inter-model SHAP comparisons.
+    numerical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='median')),('yeo_johnson', PowerTransformer(method='yeo-johnson')),('scaler', StandardScaler())])
+    categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent')),('encoder', OneHotEncoder(drop='first', handle_unknown='ignore'))])
     ordinal_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent'))])
 
     preprocessor = ColumnTransformer(transformers=[('num', numerical_transformer, numerical_features),
