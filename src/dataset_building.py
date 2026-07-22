@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import warnings
 
+# Suppress warnings to avoid cluttering output, especially from pandas or SPSS reader
 warnings.filterwarnings("ignore")
 
 def check_datasets_availability() -> bool:
@@ -16,7 +17,6 @@ def check_datasets_availability() -> bool:
     - CY08MSP_STU_QQQ.sav (1.97 GB)
     - CY08MSP_SCH_QQQ.sav (18.53 MB)
     """
-
     student_file = os.path.join("data", "CY08MSP_STU_QQQ.sav")
     school_file = os.path.join("data", "CY08MSP_SCH_QQQ.sav")
 
@@ -45,10 +45,15 @@ def check_datasets_availability() -> bool:
     print("All the requested datasets are in the required directory. ✔")
     return True
 
-
 def load_pisa_datasets() -> tuple:
     """
     Load PISA 2022 datasets from local files.
+    It first checks for the availability of the .sav files.
+    If .csv versions of the datasets exist, they are loaded for faster processing.
+    Otherwise, the .sav files are loaded using pandas.read_spss and then saved
+    as .csv files for future faster loading.
+
+    Returns:
     Automatically converts to CSV for faster future loading.
     """
     if not check_datasets_availability():
@@ -61,7 +66,7 @@ def load_pisa_datasets() -> tuple:
     
     # Check if CSV files exist
     if os.path.exists(student_csv) and os.path.exists(school_csv):
-        
+        # If CSV files are found, load them
         print("Loading from cache (faster)...")
         df_student = pd.read_csv(student_csv)
         df_school = pd.read_csv(school_csv)
@@ -82,14 +87,19 @@ def load_pisa_datasets() -> tuple:
     
     return df_student, df_school
 
-
 def filter_dataset_by_country(df: pd.DataFrame, country: str) -> pd.DataFrame:
     """
-    Filter a dataset (csv format) by country.
+    Filters a DataFrame to include only records from a specified country.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame.
+    - country (str): The country code to filter by (e.g., "Switzerland").
+
+    Returns:
+    - pd.DataFrame: A new DataFrame containing only the records for the specified country.
     """
     df_filtered_by_country = df.query("CNT == @country") #SOURCE: PYTHON DATASCIENCE HANDBOOK (p. 213)
     return df_filtered_by_country
-
 
 def merge_datasets_by_school(df_student: pd.DataFrame, df_school: pd.DataFrame) -> pd.DataFrame:
     """
@@ -101,10 +111,13 @@ def merge_datasets_by_school(df_student: pd.DataFrame, df_school: pd.DataFrame) 
     df_merged = pd.merge(df_student, df_school, on="CNTSCHID", how="left")
     return df_merged
 
-
 def build_swiss_merged_dataset():
     """
-    Build the swiss merged dataset used in the project.
+    Builds the merged dataset for Switzerland by loading PISA student and school data,
+    filtering for Switzerland, and then merging them based on school ID.
+    The resulting merged dataset is saved as 'swiss_merged_dataset.csv' in the 'data' directory.
+
+    Returns: None
     """
     df_student, df_school = load_pisa_datasets()
     
@@ -124,21 +137,23 @@ def build_swiss_merged_dataset():
     df_merged_swiss.to_csv(data_path, index=False)
     print(f"Swiss merged dataset saved to: {data_path} ✔")
    
-
 def reduced_swiss_dataset()-> pd.DataFrame:
     """
-    Build the reduced swiss dataset (19 features) used in the project.
-    Loads the swiss_merged_dataset.csv from the data directory
-    and keeps only the most relevant columns for analysis.
-    """
+    Loads the full Swiss merged dataset and reduces it to a predefined set of important features.
+    If the 'swiss_merged_dataset.csv' file does not exist, it calls `build_swiss_merged_dataset`
+    to create it first. The reduced dataset is then saved as 'swiss_reduced_dataset.csv'
+    in the 'src' directory.
 
+    Returns:
+    - pd.DataFrame: The reduced DataFrame containing only the important columns.
+    """
     file_path = os.path.join("data", "swiss_merged_dataset.csv")
     
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
         reduced_swiss_dataset()
     
-    print(f"Loading Swiss merged dataset from: {file_path}")
+    # Load the merged dataset
     df = pd.read_csv(file_path)
     print(f"Original shape: {df.shape}")
     
@@ -169,7 +184,7 @@ def reduced_swiss_dataset()-> pd.DataFrame:
         'ESCS',            # Index of economic, social and cultural status (required to build MEAN_ESCS)
     ]
     
-    # Additional step to ensure these columns exist
+    # Filter the DataFrame to keep only the important columns that actually exist
     existing_columns = [col for col in important_columns if col in df.columns]
     
     if existing_columns:
@@ -180,7 +195,6 @@ def reduced_swiss_dataset()-> pd.DataFrame:
         print("No important columns found, returning full dataset")
         df_reduced = df
     
-    print(f"Preview of reduced dataset:")
     print(df_reduced.head())
 
     #Save the swiss merged dataset in csv format

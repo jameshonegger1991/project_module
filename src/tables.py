@@ -67,7 +67,6 @@ def generate_missing_values_report(df: pd.DataFrame, threshold: float, title: st
     print(f"Overall missing %: {(total_missing / total_cells) * 100:.1f}%")
     print("=" * 80 + "\n")
 
-
 def get_descriptive_statistics(df: pd.DataFrame, title: str) -> None:
     """
     Display descriptive statistics for a DataFrame.
