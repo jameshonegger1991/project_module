@@ -2,6 +2,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+import textwrap
 
 def export_histograms(df: pd.DataFrame, title: str = "Histogram"):
     """
@@ -135,14 +136,21 @@ def display_histograms(df: pd.DataFrame, title: str = "Histograms for all numeri
         print("The DataFrame is empty. Cannot generate histograms.")
         return
 
-    numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    numeric_cols = df.select_dtypes(include='number').columns.tolist()
     if not numeric_cols:
         print("No numeric columns found to display histograms.")
         return
 
-    df[numeric_cols].hist(figsize=(12, 10), bins=30, xlabelsize=8, ylabelsize=8)
+    # `hist` returns a 2D array of axes (subplots), even if there's only one row or column.
+    axes = df[numeric_cols].hist(figsize=(22, 18), bins=30, xlabelsize=8, ylabelsize=8)
+
+    # `.ravel()` is used to flatten this 2D array into a 1D array, making it easier to iterate through each subplot.
+    for ax in axes.ravel():
+        ax.set_title(ax.get_title(), fontsize=8)
+
     plt.suptitle(title, fontsize=16)
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0, 1, 0.96], pad=2.5)
+    plt.subplots_adjust(hspace=0.9, wspace=0.4)
     plt.show()
 
 def display_violin_plots(df: pd.DataFrame, title: str = "Violin Plots - All Numeric Features"):
@@ -173,7 +181,7 @@ def display_violin_plots(df: pd.DataFrame, title: str = "Violin Plots - All Nume
     
 
     # Source: https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.subplots.html
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, n_rows * 3)) # Adjusted figsize for better layout
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(22, n_rows * 4.5)) # Adjusted figsize for better layout
     
     # Flatten the axes array to easily iterate over all subplots, regardless of grid dimensions.
     # Source: https://numpy.org/doc/stable/reference/generated/numpy.ndarray.flatten.html
@@ -187,7 +195,7 @@ def display_violin_plots(df: pd.DataFrame, title: str = "Violin Plots - All Nume
                 # Create a horizontal violin plot for the current column.
                 # Source: https://seaborn.pydata.org/generated/seaborn.violinplot.html
                 sns.violinplot(data=df[col], orient='h', ax=axes[index]) 
-                axes[index].set_title(col, fontsize=10) 
+                axes[index].set_title(col, fontsize=8) 
                 axes[index].set_xlabel('') 
                 axes[index].tick_params(labelsize=8) 
             else:
@@ -195,8 +203,9 @@ def display_violin_plots(df: pd.DataFrame, title: str = "Violin Plots - All Nume
                 axes[index].axis('off')
     
     plt.suptitle(title, fontsize=16) 
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to prevent titles/labels from overlapping. The rect parameter leaves space for suptitle.
-    plt.show() 
+    plt.tight_layout(rect=[0, 0, 1, 0.96], pad=2.5) # Adjust layout to prevent titles/labels from overlapping. The rect parameter leaves space for suptitle.
+    plt.subplots_adjust(hspace=1.0, wspace=0.4) # Adjust the height and width spacing between subplots.
+    plt.show()
 
 def display_barplots(df: pd.DataFrame, title: str = "Bar Plots - All Categorical Features"):
     """
@@ -210,33 +219,82 @@ def display_barplots(df: pd.DataFrame, title: str = "Bar Plots - All Categorical
         print("The DataFrame is empty. Cannot generate bar plots.")
         return
 
-    #This function is based on the same model as "display_violin_plots"
+    # This function is based on the same model as "display_violin_plots"
     cat_cols = df.select_dtypes(include=['object']).columns.tolist()
+
     if not cat_cols:
         print("No categorical columns found to display bar plots.")
         return
 
     n_cols = 2
     n_rows = (len(cat_cols) + 1) // 2
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6,8))
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, n_rows * 4))
     axes = axes.flatten()
-    
+
     for i in range(len(cat_cols)):
         col = cat_cols[i]
         counts = df[col].value_counts()
-        
-        # Replace spaces with newlines in labels for better readability on the x-axis
-        labels = [label.replace(' ', '\n') for label in counts.index]
-        
+
+        # Wrap long labels over multiple lines.
+        labels = [
+            "\n".join(textwrap.wrap(str(label), width=18))
+            for label in counts.index
+        ]
+
         axes[i].bar(labels, counts.values)
         axes[i].set_title(col)
         axes[i].set_ylabel('Count')
-        axes[i].tick_params(axis='x', labelsize=8, rotation=90)
-        axes[i].set_xticklabels(labels, ha='right')
-    
+        axes[i].tick_params(axis='x', labelsize=8, rotation=0)
+
     for i in range(len(cat_cols), len(axes)):
         axes[i].axis('off')
-    
+
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.subplots_adjust(hspace=0.8, wspace=0.3)
+    plt.show()
+
+def display_spearman_correlation_matrix(df: pd.DataFrame, title: str = 'Spearman Correlation Matrix'):
+    """
+    Displays the Spearman correlation matrix for all numeric variables.
+
+    Parameters:
+    - df (pd.DataFrame): The input DataFrame containing the data.
+    - title (str): The title for the correlation matrix plot.
+    """
+    if df.empty:
+        print("The DataFrame is empty. Cannot generate Spearman correlation matrix.")
+        return
+
+    # Calculate the Spearman correlation matrix
+    spearman_matrix = df.corr(method='spearman')
+    # Sort variables by correlation with the target
+    corr_asc = spearman_matrix["PV1MATH"].abs().sort_values(ascending=False).index
+    # Reorder the matrix
+    spearman_matrix = spearman_matrix.loc[corr_asc, corr_asc]
+
+    # Create the heatmap
+    plt.figure(figsize=(20, 18))
+    sns.heatmap(spearman_matrix, annot=True, fmt=".2f", cmap='coolwarm', linewidths=0.5, annot_kws={"size": 8})
+    plt.title(title, fontsize=16)
+
+    ax = plt.gca()
+
+    # Wrap x-axis tick labels to multiple lines if they are too long.
+    ax.set_xticklabels(
+        ["\n".join(textwrap.wrap(label.get_text(), 20))
+        for label in ax.get_xticklabels()],
+        rotation=90,
+        fontsize=7
+    )
+    
+    # Wrap y-axis tick labels to multiple lines if they are too long.
+    ax.set_yticklabels(
+        ["\n".join(textwrap.wrap(label.get_text(), 25))
+        for label in ax.get_yticklabels()],
+        fontsize=7
+    )
+    
+    plt.subplots_adjust(left=0.16, bottom=0.18, top=0.92)
     plt.show()

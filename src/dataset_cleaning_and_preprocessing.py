@@ -176,6 +176,7 @@ def data_preprocessing_pipeline(df: pd.DataFrame, threshold: float) -> tuple:
     #2. Train/Test Split
     if 'PV1MATH' not in df_preprocessed.columns:
         raise ValueError("Target variable 'PV1MATH' is missing from the DataFrame before train/test split.")
+    
     X_train, X_test, y_train, y_test = train_test_split(df_preprocessed.drop(columns = ['PV1MATH']), df_preprocessed['PV1MATH'], test_size=0.2, random_state = 7) # Following common practice in the literature, a 20% test set is used.
 
     #3. Transformation Pipeline
@@ -226,3 +227,22 @@ def create_imputed_dataframe(X_imputed: np.ndarray, preprocessor, y: pd.Series) 
     df = pd.DataFrame(X_imputed, columns=feature_names)
     df['PV1MATH'] = y.values
     return df
+
+def create_preprocesser_without_drop_first(X_train: pd.DataFrame) -> ColumnTransformer:
+    
+    categorical_features = ['ST004D01T', 'SCHLTYPE']
+    ordinal_features = ['ST062Q01TA', 'REPEAT', 'IMMIG'] 
+    numerical_features = [col for col in X_train.columns if col not in categorical_features + ordinal_features] 
+
+    numerical_transformer = Pipeline(steps=[('imputer', KNNImputer(n_neighbors=8)),('yeo_johnson', PowerTransformer(method='yeo-johnson')),('scaler', StandardScaler())]) 
+    
+    categorical_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent')),('encoder', OneHotEncoder(drop=None, handle_unknown='ignore'))])
+
+    ordinal_transformer = Pipeline(steps=[('imputer', SimpleImputer(strategy='most_frequent'))])
+
+    preprocessor = ColumnTransformer(transformers=[('num', numerical_transformer, numerical_features),
+                                                   ('cat', categorical_transformer, categorical_features),
+                                                   ('ord', ordinal_transformer, ordinal_features)
+                                                   ])
+    return preprocessor
+
