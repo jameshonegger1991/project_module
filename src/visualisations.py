@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 import textwrap
+import numpy as np
 
 def export_histograms(df: pd.DataFrame, title: str = "Histogram"):
     """
@@ -219,40 +220,36 @@ def display_barplots(df: pd.DataFrame, title: str = "Bar Plots - All Categorical
         print("The DataFrame is empty. Cannot generate bar plots.")
         return
 
-    # This function is based on the same model as "display_violin_plots"
+    #This function is based on the same model as "display_violin_plots"
     cat_cols = df.select_dtypes(include=['object']).columns.tolist()
-
     if not cat_cols:
         print("No categorical columns found to display bar plots.")
         return
 
     n_cols = 2
-    n_rows = (len(cat_cols) + 1) // 2
-
+    n_rows = (len(cat_cols) + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, n_rows * 4))
-    axes = axes.flatten()
-
+    # np.asarray is used here to ensure 'axes' is a NumPy array, even if subplots returns a single Axes object
+    axes = np.asarray(axes).flatten() 
+    
     for i in range(len(cat_cols)):
         col = cat_cols[i]
         counts = df[col].value_counts()
-
-        # Wrap long labels over multiple lines.
-        labels = [
-            "\n".join(textwrap.wrap(str(label), width=18))
-            for label in counts.index
-        ]
-
+        
+        # Replace spaces with newlines in labels for better readability on the x-axis
+        labels = [label.replace(' ', '\n') for label in counts.index]
+        
         axes[i].bar(labels, counts.values)
         axes[i].set_title(col)
         axes[i].set_ylabel('Count')
-        axes[i].tick_params(axis='x', labelsize=8, rotation=0)
-
+        axes[i].tick_params(axis='x', labelsize=8, rotation=90)
+        axes[i].set_xticklabels(labels, ha='right')
+    
     for i in range(len(cat_cols), len(axes)):
         axes[i].axis('off')
-
+    
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.subplots_adjust(hspace=0.8, wspace=0.3)
     plt.show()
 
 def display_spearman_correlation_matrix(df: pd.DataFrame, title: str = 'Spearman Correlation Matrix'):

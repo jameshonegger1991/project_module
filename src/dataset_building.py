@@ -2,6 +2,7 @@
 import pandas as pd
 import os
 import warnings
+from src.config import DATA_DIR, DATASET_DIR
 
 # Suppress warnings to avoid cluttering output, especially from pandas or SPSS reader
 warnings.filterwarnings("ignore")
@@ -17,8 +18,8 @@ def check_datasets_availability() -> bool:
     - CY08MSP_STU_QQQ.sav (1.97 GB)
     - CY08MSP_SCH_QQQ.sav (18.53 MB)
     """
-    student_file = os.path.join("data", "CY08MSP_STU_QQQ.sav")
-    school_file = os.path.join("data", "CY08MSP_SCH_QQQ.sav")
+    student_file = os.path.join(DATA_DIR, "CY08MSP_STU_QQQ.sav")
+    school_file = os.path.join(DATA_DIR, "CY08MSP_SCH_QQQ.sav")
 
     # Check if files exist
     missing = []
@@ -36,7 +37,7 @@ def check_datasets_availability() -> bool:
         print("\nMissing files:")
         for f in missing:
             print(f"   • {f}")
-        print(f"\nPlace them in: {os.path.abspath('data')}/")
+        print(f"\nPlace them in: {os.path.abspath(DATA_DIR)}/")
         print("\nAnd relaunch the program afterwards.")
         print("="*60 + "\n")
         return False
@@ -56,13 +57,11 @@ def load_pisa_datasets() -> tuple:
     Returns:
     Automatically converts to CSV for faster future loading.
     """
-    if not check_datasets_availability():
-        return None, None
-    
-    student_sav = os.path.join("data", "CY08MSP_STU_QQQ.sav")
-    school_sav = os.path.join("data", "CY08MSP_SCH_QQQ.sav")
-    student_csv = os.path.join("data", "pisa_2022_student.csv")
-    school_csv = os.path.join("data", "pisa_2022_school.csv")
+
+    student_sav = os.path.join(DATA_DIR, "CY08MSP_STU_QQQ.sav")
+    school_sav = os.path.join(DATA_DIR, "CY08MSP_SCH_QQQ.sav")
+    student_csv = os.path.join(DATA_DIR, "pisa_2022_student.csv")
+    school_csv = os.path.join(DATA_DIR, "pisa_2022_school.csv")
     
     # Check if CSV files exist
     if os.path.exists(student_csv) and os.path.exists(school_csv):
@@ -72,6 +71,9 @@ def load_pisa_datasets() -> tuple:
         df_school = pd.read_csv(school_csv)
     
     else:
+
+        if not check_datasets_availability():
+            return None, None
         
         print("Loading from .sav datasets and converting to CSV...")
         print("This may take a few minutes for the student dataset (1.97 GB)...")
@@ -132,8 +134,8 @@ def build_swiss_merged_dataset():
 
     #Save the swiss merged dataset in csv format
     print(f"Saving swiss merged dataset in the data directory...")
-    os.makedirs("data", exist_ok=True)
-    data_path = os.path.join("data", "swiss_merged_dataset.csv")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    data_path = os.path.join(DATA_DIR, "swiss_merged_dataset.csv")
     df_merged_swiss.to_csv(data_path, index=False)
     print(f"Swiss merged dataset saved to: {data_path} ✔")
    
@@ -147,11 +149,11 @@ def reduced_swiss_dataset()-> pd.DataFrame:
     Returns:
     - pd.DataFrame: The reduced DataFrame containing only the important columns.
     """
-    file_path = os.path.join("data", "swiss_merged_dataset.csv")
+    file_path = os.path.join(DATA_DIR, "swiss_merged_dataset.csv")
     
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
-        reduced_swiss_dataset()
+        build_swiss_merged_dataset()
     
     # Load the merged dataset
     df = pd.read_csv(file_path)
@@ -199,9 +201,9 @@ def reduced_swiss_dataset()-> pd.DataFrame:
 
     #Save the swiss merged dataset in csv format
     print(f"Saving reduced swiss dataset in the src directory...")
-    os.makedirs("src", exist_ok=True)
-    src_path = os.path.join("src", "swiss_reduced_dataset.csv")
-    df_reduced.to_csv(src_path, index=False)
-    print(f"Swiss reduced dataset saved to: {src_path} ✔")
+    os.makedirs(DATASET_DIR, exist_ok=True)
+    reduced_path = os.path.join(DATASET_DIR, "swiss_reduced_dataset.csv")
+    df_reduced.to_csv(reduced_path, index=False)
+    print(f"Swiss reduced dataset saved to: {reduced_path} ✔")
 
     return df_reduced

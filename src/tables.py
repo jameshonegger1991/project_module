@@ -225,8 +225,8 @@ def display_correlations_between_features(df: pd.DataFrame, target: str = "PV1MA
         correlations_df[
             correlations_df["Correlation"].abs() >= corr_threshold
         ]
-        .assign(
-            Absolute_Correlation=lambda x: x["Correlation"].abs()
+        .assign( # Using .assign() avoids a SettingWithCopyWarning by returning a new DataFrame.
+            Absolute_Correlation = lambda x: x["Correlation"].abs() # INSPIRATION: https://medium.com/@whyamit404/understanding-pandas-assign-with-step-by-step-examples-6cf2d79ff481 
         )
         .sort_values("Absolute_Correlation", ascending=False)
         .reset_index(drop=True)
@@ -247,3 +247,14 @@ def display_correlations_between_features(df: pd.DataFrame, target: str = "PV1MA
         print("No feature pair exceeds the selected corr_threshold.")
     else:
         print(multicollinearity_risk)
+
+def variance_threshold_report(threshold: float, numeric_cols: list[str], selected_features: list[str]) -> None:
+    """
+    Display numerical features retained and removed by VarianceThreshold.
+    """
+    
+    removed_features = [col for col in numeric_cols if col not in selected_features]
+    print(f"Variance threshold ({threshold}) applied to numerical columns.")
+    print(f" Columns kept : {len(selected_features)}/{len(numeric_cols)}")
+    if removed_features:
+        print(f" Columns deleted : {removed_features}")
