@@ -57,19 +57,23 @@ def filter_columns_from_training_data(X_train: pd.DataFrame, X_test: pd.DataFram
 
 def ordinal_features_mapping(df: pd.DataFrame) -> pd.DataFrame:
     """Map ordinal categorical features to ordered numerical codes."""
+   
     result = df.copy()
-    result["REPEAT"] = result["REPEAT"].replace({"Never repeated": 0, "Repeated at lease once": 1})
+    result["REPEAT"] = result["REPEAT"].replace({"Never repeated": 0, "Repeated at least once": 1})
+
     result["ST062Q01TA"] = result["ST062Q01TA"].replace({
         "Never": 1,
         "One or two times": 2,
         "Three or four times": 3,
         "Five or more times": 4,
     })
+
     result["IMMIG"] = result["IMMIG"].replace({
         "Native student": 1,
         "Second-Generation student": 2,
         "First-Generation student": 3,
     })
+
     return result
 
 
