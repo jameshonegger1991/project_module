@@ -59,7 +59,7 @@ def ordinal_features_mapping(df: pd.DataFrame) -> pd.DataFrame:
     """Map ordinal categorical features to ordered numerical codes."""
    
     result = df.copy()
-    result["REPEAT"] = result["REPEAT"].replace({"Never repeated": 0, "Repeated at least once": 1})
+    result["REPEAT"] = result["REPEAT"].replace({"Never repeated": 0, "Repeated at least once": 1, "Repeated at lease once": 1,})
 
     result["ST062Q01TA"] = result["ST062Q01TA"].replace({
         "Never": 1,

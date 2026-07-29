@@ -8,7 +8,11 @@ from src.dataset_cleaning_and_preprocessing import (
     create_imputed_dataframe,
     run_preprocessing_pipeline,
 )
-from src.features_selection import apply_variance_threshold
+
+from src.features_selection import (
+    run_feature_selection_pipeline,
+)
+
 from src.tables import (
     display_correlations_between_features,
     display_correlations_with_target,
@@ -35,23 +39,23 @@ if __name__ == "__main__":
     (X_train_imputed, X_test_imputed, X_train, X_test, y_train, y_test, df_raw_with_correct_features, df_preprocessed, numeric_imputed_feature_names, all_imputed_feature_names, removed_missing_columns) = run_preprocessing_pipeline(df_raw, MISSING_VALUES_THRESHOLD)
 
     # 2. ========== GLOBAL EXPLORATORY DATA ANALYSIS ==========
-    get_descriptive_statistics(df_raw_with_correct_features, "GLOBAL DATA EXPLORATORY ANALYSIS (BEFORE CLEANING)")
-    get_descriptive_statistics(df_preprocessed, "GLOBAL DATA EXPLORATORY ANALYSIS (CLEANED WHOLE DATASET)")
-    print()
-    print("Columns removed from training-set missingness:", removed_missing_columns or "None")
-    print()
-    generate_missing_values_report(df_raw_with_correct_features, MISSING_VALUES_THRESHOLD, "MISSING VALUES REPORT (BEFORE CLEANING)")
+    #get_descriptive_statistics(df_raw_with_correct_features, "GLOBAL DATA EXPLORATORY ANALYSIS (BEFORE CLEANING)")
+    #get_descriptive_statistics(df_preprocessed, "GLOBAL DATA EXPLORATORY ANALYSIS (CLEANED WHOLE DATASET)")
+    #print()
+    #print("Columns removed from training-set missingness:", removed_missing_columns or "None")
+    #print()
+    #generate_missing_values_report(df_raw_with_correct_features, MISSING_VALUES_THRESHOLD, "MISSING VALUES REPORT (BEFORE CLEANING)")
 
     if os.path.exists("plots"):
         shutil.rmtree("plots")
 
     # Optional visualisations on original/interpretable units.
-    export_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
-    export_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
-    export_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
-    display_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
-    display_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
-    display_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
+    #export_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
+    #export_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
+    #export_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
+    #display_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
+    #display_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
+    #display_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
 
 
     # 3. ========== TRAIN-SET EDA AFTER IMPUTATION ==========
@@ -65,11 +69,10 @@ if __name__ == "__main__":
         y_train,
     )
 
-    display_spearman_correlation_matrix(df_train_set_for_eda, "SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION)")
-    display_correlations_with_target(df_train_set_for_eda, "PV1MATH")
-    display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
+    #display_spearman_correlation_matrix(df_train_set_for_eda, "SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION)")
+    #display_correlations_with_target(df_train_set_for_eda, "PV1MATH")
+    #display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
 
     # 4. ========== FEATURE SELECTION ==========
+    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names)
     
-    (X_train_after_var_threshold, X_test_after_var_threshold, selected_cols_after_var_threshold,variance_selector) = apply_variance_threshold(X_train_imputed, X_test_imputed, all_imputed_feature_names, numeric_imputed_feature_names, threshold=VARIANCE_THRESHOLD)
-    variance_threshold_report(variance_selector.threshold, numeric_imputed_feature_names, selected_cols_after_var_threshold)
