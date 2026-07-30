@@ -91,14 +91,7 @@ def load_pisa_datasets() -> tuple:
 
 def filter_dataset_by_country(df: pd.DataFrame, country: str) -> pd.DataFrame:
     """
-    Filters a DataFrame to include only records from a specified country.
-
-    Parameters:
-    - df (pd.DataFrame): The input DataFrame.
-    - country (str): The country code to filter by (e.g., "Switzerland").
-
-    Returns:
-    - pd.DataFrame: A new DataFrame containing only the records for the specified country.
+    Filters a DataFrame to include only records from a specified country and returns a new DataFrame containing only the records for the specified country.
     """
     df_filtered_by_country = df.query("CNT == @country") #SOURCE: PYTHON DATASCIENCE HANDBOOK (p. 213)
     return df_filtered_by_country
@@ -118,8 +111,6 @@ def build_swiss_merged_dataset():
     Builds the merged dataset for Switzerland by loading PISA student and school data,
     filtering for Switzerland, and then merging them based on school ID.
     The resulting merged dataset is saved as 'swiss_merged_dataset.csv' in the 'data' directory.
-
-    Returns: None
     """
     df_student, df_school = load_pisa_datasets()
     
@@ -143,11 +134,8 @@ def reduced_swiss_dataset()-> pd.DataFrame:
     """
     Loads the full Swiss merged dataset and reduces it to a predefined set of important features.
     If the 'swiss_merged_dataset.csv' file does not exist, it calls `build_swiss_merged_dataset`
-    to create it first. The reduced dataset is then saved as 'swiss_reduced_dataset.csv'
-    in the 'src' directory.
-
-    Returns:
-    - pd.DataFrame: The reduced DataFrame containing only the important columns.
+    to create it first. The reduced dataset is saved as 'swiss_reduced_dataset.csv' 
+    in the 'src' directory and returned.
     """
     file_path = os.path.join(DATA_DIR, "swiss_merged_dataset.csv")
     

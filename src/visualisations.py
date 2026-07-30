@@ -8,10 +8,6 @@ import numpy as np
 def export_histograms(df: pd.DataFrame, title: str = "Histogram"):
     """
     Save histograms for all numeric columns to 'plots/univariate_plots/histograms'.
-
-    Parameters: 
-    - df: The input DataFrame containing the data.
-    - title: The main title for the entire figure of histograms.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate histograms.")
@@ -44,10 +40,6 @@ def export_histograms(df: pd.DataFrame, title: str = "Histogram"):
 def export_violin_plots(df: pd.DataFrame, title: str = "Violin Plot"):
     """
     Save violin plots for all numeric columns to 'plots/univariate_plots/violin_plots/'.
-
-    Parameters:
-    - df (pd.DataFrame): The input DataFrame containing the data.
-    - title: The main title for the entire figure of violin plots.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate violin plots.")
@@ -80,13 +72,8 @@ def export_violin_plots(df: pd.DataFrame, title: str = "Violin Plot"):
     print(f"{len(numeric_cols)} violin plots saved to plots/univariate_plots/violin_plots/")
 
 def export_barplots(df: pd.DataFrame, title: str = "Bar Plot"):
-
     """
-    Generate bar plots for all categorical features.
-
-    Parameters:
-    - df (pd.DataFrame): The input DataFrame containing the data.
-    - title (str): The main title for the entire figure of bar plots.
+    Generate bar plots for all categorical features and save them to 'plots/univariate_plots/barplots/'.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate bar plots.")
@@ -128,10 +115,6 @@ def export_barplots(df: pd.DataFrame, title: str = "Bar Plot"):
 def display_histograms(df: pd.DataFrame, title: str = "Histograms for all numeric features"):
     """
     Display a grid of histograms for all numeric columns.
-
-    Parameters:
-        df (pd.DataFrame): The input DataFrame containing the data.
-        title (str): The main title for the entire figure of histograms.
     """ 
     if df.empty:
         print("The DataFrame is empty. Cannot generate histograms.")
@@ -156,12 +139,7 @@ def display_histograms(df: pd.DataFrame, title: str = "Histograms for all numeri
 
 def display_violin_plots(df: pd.DataFrame, title: str = "Violin Plots - All Numeric Features"):
     """
-    Generates and displays violin plots for all numeric columns in the DataFrame.
-
-    Parameters:
-    - df (pd.DataFrame): The input DataFrame containing the data.
-    - title (str): The main title for the entire figure of violin plots.
-    
+    Displays violin plots for all numeric columns in the DataFrame. 
     Inspiration: https://www.datasciencebyexample.com/2022/05/15/2022-05-15-1/ 
     """
     if df.empty:
@@ -210,11 +188,7 @@ def display_violin_plots(df: pd.DataFrame, title: str = "Violin Plots - All Nume
 
 def display_barplots(df: pd.DataFrame, title: str = "Bar Plots - All Categorical Features"):
     """
-    Generates and displays bar plots for all categorical columns in the DataFrame.
-
-    Parameters:
-    - df (pd.DataFrame): The input DataFrame containing the data.
-    - title (str): The main title for the entire figure of bar plots.
+    Displays bar plots for all categorical columns in the DataFrame.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate bar plots.")
@@ -255,10 +229,6 @@ def display_barplots(df: pd.DataFrame, title: str = "Bar Plots - All Categorical
 def display_spearman_correlation_matrix(df: pd.DataFrame, title: str = 'Spearman Correlation Matrix'):
     """
     Displays the Spearman correlation matrix for all numeric variables.
-
-    Parameters:
-    - df (pd.DataFrame): The input DataFrame containing the data.
-    - title (str): The title for the correlation matrix plot.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate Spearman correlation matrix.")

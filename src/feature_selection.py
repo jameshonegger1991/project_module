@@ -27,20 +27,25 @@ def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESH
     Applies variance thresholding to select features and generates a report and returns a tuple
     containing the report DataFrame and a list of selected feature names.
     """
+
+    if X_train.shape[1] != len(feature_names):
+        raise ValueError("feature_names must contain one name per column in X_train.")
     
     selector = VarianceThreshold(threshold=threshold)
-    selector.fit_transform(X_train)
-    selected_indices = selector.get_support(indices=True) 
+    selector.fit(X_train)
+
+    selected_indices = selector.get_support(indices=True)
+
     selected_cols = [feature_names[i] for i in selected_indices]
     
-    variances = np.var(X_train, axis=0)
     report_df = pd.DataFrame({
         'Feature': feature_names,
-        'Variance': variances,
-        'Status': [' KEPT' if selector.get_support()[i] else 'REMOVED' for i in range(len(feature_names))]
-    }).sort_values('Variance', ascending = False) # To display the most variable features first.
+        'Variance': selector.variances_,
+        'Status': ['KEPT' if selector.get_support()[i] else 'REMOVED' for i in range(len(feature_names))]
+        }).sort_values('Variance', ascending = False
+                       ).reset_index(drop=True)
     
-    return report_df, selected_cols, threshold, feature_names
+    return report_df, selected_cols, threshold
 
 def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
     """
@@ -56,15 +61,15 @@ def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
     # - https://medium.com/@suvendulearns/decoding-mutual-information-mi-a-guide-for-machine-learning-practitioners-b0f0ca0b30c9  
 
     if task == 'regression':
-        mi_scores = mutual_info_regression(X_train, y_train, random_state=7)
+        mi_scores = mutual_info_regression(X_train, y_train, random_state=7) 
+    elif task == 'classification':
+        mi_scores = mutual_info_classif(X_train, y_train, random_state=7) 
     else:
-        mi_scores = mutual_info_classif(X_train, y_train, random_state=7)
-    
-    ranking_df = pd.DataFrame({
-        'Feature': feature_names,
-        'MI_Score': mi_scores,
-        'Ranking': mi_scores.argsort()[::-1] + 1 # Creates a 1-based ranking where the feature with the highest MI score gets rank 1.
-    }).sort_values('Ranking')
+        raise ValueError("task must be 'regression' or 'classification'")
+
+    ranking_df = pd.DataFrame({'Feature': feature_names, 'MI_Score': mi_scores})
+    ranking_df['Ranking'] = (ranking_df['MI_Score'].rank(method='min', ascending=False).astype(int)) # Ranks features based on MI scores, assigning the same rank to tied scores.
+    ranking_df = ranking_df.sort_values(['Ranking', 'Feature']).reset_index(drop=True) # Sorts the DataFrame by rank and then by feature name, resetting the index.
     
     return ranking_df
 
@@ -173,20 +178,20 @@ def select_top_features(combined_rankings, k = 20):
 
 def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_threshold = VARIANCE_THRESHOLD, task: str = 'regression'):
 
-    variance_treshold_df, selected_columns_var_thresh, threshold, feature_names = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
+    variance_treshold_df, selected_columns_var_thresh, threshold = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
     display_variance_threshold(variance_treshold_df, threshold, selected_columns_var_thresh, feature_names)
 
     selected_indices = [feature_names.index(col) for col in selected_columns_var_thresh]
     X_train_after_var_thresh = X_train[:, selected_indices]
     X_test_after_var_thresh = X_test[:, selected_indices]
     
-    ranking_MI_df = apply_mutual_info(X_train_after_var_thresh, y_train, feature_names, task = task)
+    ranking_MI_df = apply_mutual_info(X_train_after_var_thresh, y_train, selected_columns_var_thresh, task = task)
     display_mutual_info(ranking_MI_df, task, X_train_after_var_thresh)
 
-    ranking_anova_df = apply_ANOVA(X_train_after_var_thresh, y_train, feature_names, task = task)
+    ranking_anova_df = apply_ANOVA(X_train_after_var_thresh, y_train, selected_columns_var_thresh, task = task)
     display_anova(ranking_anova_df, task, X_train_after_var_thresh)
 
-    ranking_rfe_df= apply_rfe(X_train_after_var_thresh, y_train, feature_names, task = task, step=1)
+    ranking_rfe_df= apply_rfe(X_train_after_var_thresh, y_train, selected_columns_var_thresh, task = task, step=1)
     display_rfe(ranking_rfe_df, task, X_train_after_var_thresh)
 
     final_features_ranking, method_names = summarise_feature_rankings([ranking_MI_df, ranking_anova_df, ranking_rfe_df], ["Mutual Information", "ANOVA", "RFE"])

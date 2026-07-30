@@ -27,9 +27,8 @@ def test_apply_zero_variance_threshold():
     # Based on `sklearn.feature_selection.VarianceThreshold` behavior,
     # features with variance *equal to* 0 should be removed.
     # Reference: https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.VarianceThreshold.html
-    report_df, selected_cols, threshold_returned, feature_names_returned = apply_variance_threshold(
-        X, feature_names, threshold=0
-    )
+  
+    report_df, selected_cols, threshold_returned = apply_variance_threshold(X, feature_names, threshold=0)
     
     # Assertions to confirm the expected outcome:
     # - Only 'A' and 'C' should be kept.
@@ -44,12 +43,8 @@ def test_apply_zero_variance_threshold():
     assert 'Variance' in report_df.columns
     assert 'Status' in report_df.columns
     assert report_df[report_df['Feature'] == 'B']['Status'].iloc[0] == 'REMOVED'
-    assert report_df[report_df['Feature'] == 'A']['Status'].iloc[0] == ' KEPT'
-    assert report_df[report_df['Feature'] == 'C']['Status'].iloc[0] == ' KEPT'
-
-    # And verifying that the returned metadata matches the input.
-    assert threshold_returned == 0
-    assert feature_names_returned == feature_names
+    assert report_df[report_df['Feature'] == 'A']['Status'].iloc[0] == 'KEPT'
+    assert report_df[report_df['Feature'] == 'C']['Status'].iloc[0] == 'KEPT'
 
 def test_apply_variance_threshold_with_higher_threshold():
     """
@@ -61,9 +56,7 @@ def test_apply_variance_threshold_with_higher_threshold():
     X = np.array([[1, 2, 3], [2, 2, 4], [3, 2, 5]])
     feature_names = ['A', 'B', 'C']
     
-    report_df, selected_cols, threshold_returned, feature_names_returned = apply_variance_threshold(
-        X, feature_names, threshold=0.5
-    )
+    report_df, selected_cols, threshold_returned = apply_variance_threshold(X, feature_names, threshold=0.5)
     
     # Only 'B' should be removed (variance = 0 < 0.5)
     # 'A' and 'C' have variance ~0.67 > 0.5, so they stay
@@ -72,11 +65,10 @@ def test_apply_variance_threshold_with_higher_threshold():
     assert 'A' in selected_cols
     assert 'C' in selected_cols
     assert threshold_returned == 0.5
-    assert feature_names_returned == feature_names
     
     assert report_df[report_df['Feature'] == 'B']['Status'].iloc[0] == 'REMOVED'
-    assert report_df[report_df['Feature'] == 'A']['Status'].iloc[0] == ' KEPT'
-    assert report_df[report_df['Feature'] == 'C']['Status'].iloc[0] == ' KEPT'
+    assert report_df[report_df['Feature'] == 'A']['Status'].iloc[0] == 'KEPT'
+    assert report_df[report_df['Feature'] == 'C']['Status'].iloc[0] == 'KEPT'
 
 def test_apply_mutual_info():
     """

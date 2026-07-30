@@ -19,7 +19,7 @@ from src.config import (
 
 
 def add_derived_features_and_clean(df: pd.DataFrame) -> pd.DataFrame:
-    """Create MMINS and MEAN_ESCS, then remove identifiers/source features."""
+    """Create MMINS and MEAN_ESCS, then remove identifiers/source features and return a copy."""
     result = df.copy()
     result["MMINS"] = result["ST059Q01TA"] * result["SC175Q01JA"]
     result["MEAN_ESCS"] = result.groupby("CNTSCHID")["ESCS"].transform("mean")
