@@ -1,6 +1,7 @@
 import pandas as pd
 from src.dataset_cleaning_and_preprocessing import get_missing_percentages_per_column
 from src.dataset_cleaning_and_preprocessing import get_missing_percentages_per_row
+from src.config import VARIANCE_THRESHOLD
 
 
 def generate_missing_values_report(df: pd.DataFrame, threshold: float, title: str) -> None:
@@ -248,13 +249,53 @@ def display_correlations_between_features(df: pd.DataFrame, target: str = "PV1MA
     else:
         print(multicollinearity_risk)
 
-def variance_threshold_report(threshold: float, numeric_cols: list[str], selected_features: list[str]) -> None:
-    """
-    Display numerical features retained and removed by VarianceThreshold.
-    """
+
+# ==== FEATURE SELECTION ==== 
+def display_variance_threshold(ranking_VThresh: pd.DataFrame, threshold = VARIANCE_THRESHOLD, selected_cols: list = [], feature_names: list = []):
+    print("\n" + "=" * 80)
+    print(f"Variance Threshold (threshold = {threshold}) : {len(selected_cols)}/{len(feature_names)} kept")
+    print("=" * 80)
+    print()
+    print(ranking_VThresh.to_string(index=False))
+    print()
+
+def display_mutual_info(ranking_MI: pd.DataFrame, task: str, X_train: pd.DataFrame):
+
+    print("\n" + "=" * 80)
+    print(f"Mutual Information ({task}) : Complete ranking of {X_train.shape[1]} features.")
+    print("=" * 80)
+    print("\n Mutual Information Ranking (1 = best) :")
+    print()
+    print(ranking_MI.to_string(index=False))
+    print()
     
-    removed_features = [col for col in numeric_cols if col not in selected_features]
-    print(f"Variance threshold ({threshold}) applied to numerical columns.")
-    print(f" Columns kept : {len(selected_features)}/{len(numeric_cols)}")
-    if removed_features:
-        print(f" Columns deleted : {removed_features}")
+def display_anova(ranking_anova: pd.DataFrame, task: str, X_train: pd.DataFrame):
+    print("\n" + "=" * 80)
+    print(f"ANOVA ({task}) : Complete ranking of {X_train.shape[1]} features.")
+    print("=" * 80)
+    print("\n ANOVA Ranking (1 = best F-score) :")
+    print(ranking_anova.to_string(index = False))
+
+def display_rfe(ranking_rfe: pd.DataFrame, task: str, X_train: pd.DataFrame):
+    print("\n" + "=" * 80)
+    print(f"RFE ({task}) : Complete ranking of {X_train.shape[1]} features.")
+    print("=" * 80)
+    print("\n RFE Ranking (1 = best) :")
+    print(ranking_rfe.to_string(index=False))
+
+def display_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_names: list = None):
+
+    print("\n" + "=" * 80)
+    print("COMBINED FINAL RANKING")
+    print("=" * 80)
+    print(f"\n {len(combined_rankings)} combined methods: {', '.join(method_names)}")
+    print("\n Final Ranking:")
+    print(combined_rankings.to_string(index=False))
+
+def display_top_features(top_features: list, k: int):
+    print("\n" + "=" * 80)
+    print(f"TOP {k} FEATURES SELECTED")
+    print("=" * 80)
+    print()
+    for i, feature in enumerate(top_features, 1):
+        print(f"  {i}. {feature}")

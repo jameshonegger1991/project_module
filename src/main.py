@@ -9,7 +9,7 @@ from src.dataset_cleaning_and_preprocessing import (
     run_preprocessing_pipeline,
 )
 
-from src.features_selection import (
+from src.feature_selection import (
     run_feature_selection_pipeline,
 )
 
@@ -18,7 +18,6 @@ from src.tables import (
     display_correlations_with_target,
     generate_missing_values_report,
     get_descriptive_statistics,
-    variance_threshold_report,
 )
 from src.visualisations import (
     display_barplots,
@@ -74,5 +73,5 @@ if __name__ == "__main__":
     #display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
 
     # 4. ========== FEATURE SELECTION ==========
-    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names)
+    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
     

@@ -10,7 +10,19 @@ from sklearn.feature_selection import(
 )
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
-def apply_variance_threshold(X_train, feature_names, threshold = 0.01):
+from src.config import (
+    VARIANCE_THRESHOLD,
+)
+from src.tables import (
+    display_variance_threshold,
+    display_mutual_info,
+    display_anova,
+    display_rfe,
+    display_summarised_feature_rankings,
+    display_top_features,
+)
+
+def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESHOLD):
     """
     Applies variance thresholding to select features and generates a report and returns a tuple
     containing the report DataFrame and a list of selected feature names.
@@ -28,12 +40,7 @@ def apply_variance_threshold(X_train, feature_names, threshold = 0.01):
         'Status': [' KEPT' if selector.get_support()[i] else 'REMOVED' for i in range(len(feature_names))]
     }).sort_values('Variance', ascending = False) # To display the most variable features first.
     
-    print(f"\n Variance Threshold (threshold = {threshold}) : {len(selected_cols)}/{len(feature_names)} kept")
-    print()
-    print(report_df.to_string(index=False))
-    
-    return report_df, selected_cols
-
+    return report_df, selected_cols, threshold, feature_names
 
 def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
     """
@@ -59,13 +66,9 @@ def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
         'Ranking': mi_scores.argsort()[::-1] + 1 # Creates a 1-based ranking where the feature with the highest MI score gets rank 1.
     }).sort_values('Ranking')
     
-    print(f" Mutual Information ({task}) : Classement complet de {X_train.shape[1]} features.")
-    print("\n Classement Mutual Information (1 = meilleur) :")
-    print(ranking_df.to_string(index=False))
-    
     return ranking_df
 
-def apply_ANOVA(X_train, y_train, feature_names, task='regression'):
+def apply_ANOVA(X_train, y_train, feature_names, task ='regression'):
     """
     Applies the ANOVA F-test to features and returns a complete ranking (df) with feature names, F-scores, p-values, and their ranking.
     """
@@ -85,19 +88,14 @@ def apply_ANOVA(X_train, y_train, feature_names, task='regression'):
     })
     
     # Sort by F-Score in descending order (from largest to smallest)
-    ranking_df = ranking_df.sort_values('F_Score', ascending=False)
+    ranking_df = ranking_df.sort_values('F_Score', ascending = False)
     
     # Add the ranking (1 = best F-score)
     ranking_df['Ranking'] = range(1, len(ranking_df) + 1)
     
-    print(f" ANOVA ({task}) : Complete ranking of {X_train.shape[1]} features.")
-    print("\n ANOVA Ranking (1 = best F-score) :")
-    print(ranking_df.to_string(index=False))
-    
     return ranking_df
 
-
-def apply_rfe(X_train, y_train, feature_names, task='regression', step = 1):
+def apply_rfe(X_train, y_train, feature_names, task ='regression', step = 1):
     """
     Performs Recursive Feature Elimination (RFE) with a RandomForest estimator to return a complete feature ranking with feature names. 
     """
@@ -121,13 +119,9 @@ def apply_rfe(X_train, y_train, feature_names, task='regression', step = 1):
         'Ranking': selector.ranking_
     }).sort_values('Ranking')
     
-    print(f" RFE ({task}) : Complete ranking of {X_train.shape[1]} features.")
-    print("\n RFE Ranking (1 = best) :")
-    print(rfe_df.to_string(index=False))
-    
     return rfe_df
 
-def summarise_feature_rankings(ranking_dfs, method_names=None):
+def summarise_feature_rankings(ranking_dfs, method_names = None):
     """
     Combines multiple feature rankings into a single final ranking and returns it as a DataFrame that contains:
     - features
@@ -160,14 +154,7 @@ def summarise_feature_rankings(ranking_dfs, method_names=None):
     combined_df['Final ranking'] = combined_df['Sum of ranks'].rank(method='min').astype(int)
     combined_df = combined_df.sort_values('Final ranking')
     
-    print("\n" + "=" * 80)
-    print("COMBINED FINAL RANKING")
-    print("=" * 80)
-    print(f"\n {len(ranking_dfs)} combined methods: {', '.join(method_names)}")
-    print("\n Final Ranking:")
-    print(combined_df.to_string(index=False))
-    
-    return combined_df
+    return combined_df, method_names
 
 def select_top_features(combined_rankings, k = 20):
     """
@@ -182,24 +169,30 @@ def select_top_features(combined_rankings, k = 20):
     
     top_features = combined_rankings.head(k)['Feature'].tolist()
     
-    print("\n" + "=" * 80)
-    print(f"TOP {k} FEATURES SELECTED")
-    print("=" * 80)
-    for i, feature in enumerate(top_features, 1):
-        print(f"  {i}. {feature}")
-    
-    return top_features
+    return top_features, k
 
-def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names):
-    variance_treshold_df, selected_columns_var_thresh = apply_variance_threshold(X_train, feature_names, threshold = 0)
+def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_threshold = VARIANCE_THRESHOLD, task: str = 'regression'):
+
+    variance_treshold_df, selected_columns_var_thresh, threshold, feature_names = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
+    display_variance_threshold(variance_treshold_df, threshold, selected_columns_var_thresh, feature_names)
+
     selected_indices = [feature_names.index(col) for col in selected_columns_var_thresh]
     X_train_after_var_thresh = X_train[:, selected_indices]
     X_test_after_var_thresh = X_test[:, selected_indices]
     
-    ranking_MI_df = apply_mutual_info(X_train_after_var_thresh, y_train, feature_names, task='regression')
-    ranking_anova_df = apply_ANOVA(X_train_after_var_thresh, y_train, feature_names, task='regression')
-    ranking_rfe_df = apply_rfe(X_train_after_var_thresh, y_train, feature_names, task='regression', step=1)
-    final_features_ranking = summarise_feature_rankings([ranking_MI_df, ranking_anova_df, ranking_rfe_df], ["Mutual Information", "ANOVA", "RFE"])
-    select_top_features(final_features_ranking, 10)
+    ranking_MI_df = apply_mutual_info(X_train_after_var_thresh, y_train, feature_names, task = task)
+    display_mutual_info(ranking_MI_df, task, X_train_after_var_thresh)
+
+    ranking_anova_df = apply_ANOVA(X_train_after_var_thresh, y_train, feature_names, task = task)
+    display_anova(ranking_anova_df, task, X_train_after_var_thresh)
+
+    ranking_rfe_df= apply_rfe(X_train_after_var_thresh, y_train, feature_names, task = task, step=1)
+    display_rfe(ranking_rfe_df, task, X_train_after_var_thresh)
+
+    final_features_ranking, method_names = summarise_feature_rankings([ranking_MI_df, ranking_anova_df, ranking_rfe_df], ["Mutual Information", "ANOVA", "RFE"])
+    display_summarised_feature_rankings(final_features_ranking, method_names)
+
+    top_features, k = select_top_features(final_features_ranking, 10)
+    display_top_features(top_features, k)
 
     return final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh
