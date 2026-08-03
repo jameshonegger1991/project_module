@@ -1,7 +1,8 @@
 import os
 import shutil
+import pandas as pd
 
-from src.config import MISSING_VALUES_THRESHOLD, VARIANCE_THRESHOLD
+from src.config import MISSING_VALUES_THRESHOLD, CLASS_BOUNDARIES, CLASS_LABELS
 from src.dataset_building import reduced_swiss_dataset
 from src.dataset_cleaning_and_preprocessing import (
     create_eda_preprocessor,
@@ -28,6 +29,8 @@ from src.visualisations import (
     export_histograms,
     export_violin_plots,
 )
+from src.model_training import run_models
+
 
 
 if __name__ == "__main__":
@@ -73,5 +76,16 @@ if __name__ == "__main__":
     #display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
 
     # 4. ========== FEATURE SELECTION ==========
+
+    #y_train/test for classification task
+    y_train_class = pd.cut(y_train, bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
+    y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
+
+    #REGRESSION
     (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
-    
+    run_models("regression", X_train_after_var_thresh, y_train, X_test_after_var_thresh, y_test, final_features_ranking, all_imputed_feature_names)
+
+    #CLASSIFICATION
+    #(final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
+    #run_models("classification", X_train_after_var_thresh, y_train_class, X_test_after_var_thresh, y_test_class, final_features_ranking, all_imputed_feature_names)
+

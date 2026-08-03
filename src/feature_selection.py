@@ -197,7 +197,7 @@ def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_
     final_features_ranking, method_names = summarise_feature_rankings([ranking_MI_df, ranking_anova_df, ranking_rfe_df], ["Mutual Information", "ANOVA", "RFE"])
     display_summarised_feature_rankings(final_features_ranking, method_names)
 
-    top_features, k = select_top_features(final_features_ranking, 10)
-    display_top_features(top_features, k)
+    #top_features, k = select_top_features(final_features_ranking, 10)
+    #display_top_features(top_features, k)
 
     return final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh

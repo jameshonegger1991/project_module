@@ -11,3 +11,8 @@ ORDINAL_COLS = ["ST062Q01TA", "REPEAT", "IMMIG"]
 
 DATA_DIR = "data"
 DATASET_DIR = "dataset"
+
+CLASS_BOUNDARIES = [float("-inf"), 420.07, 606.99, float("inf")] # Based on: OECD, Ed., PISA 2022 Technical Report. Paris: OECD Publishing, 2024.
+CLASS_LABELS_DICT = {0: "Low Proficient", 1: "Medium Proficient", 2: "High Achievers"} # Based on: OECD, Ed., PISA 2022 Technical Report. Paris: OECD Publishing, 2024.
+CLASS_LABELS = ["Low Proficient", "Medium Proficient", "High Achievers"]
+
