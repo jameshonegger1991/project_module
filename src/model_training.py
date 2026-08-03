@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 from xgboost import XGBClassifier, XGBRegressor
 
@@ -9,6 +8,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.svm import SVC, SVR
 
 from src.feature_selection import select_top_features
 
@@ -167,7 +167,7 @@ def XGBoost_regressor(X_train, y_train, X_test, y_test):
         'model__reg_lambda': [1.0, 2.0]
         }
 
-    pipeline = Pipeline([("model", XGBRegressor( random_state=7, n_jobs=-1))])
+    pipeline = Pipeline([("model", XGBRegressor(random_state=7, n_jobs=-1))])
     grid_search = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=1)
     grid_search.fit(X_train, y_train)
 
@@ -200,6 +200,68 @@ def XGBoost_regressor(X_train, y_train, X_test, y_test):
 
     print("\n" + "=" * 50)
     print("XGBOOST REGRESSION - RESULTS")
+    print("=" * 50)
+    print(f"{'Metric':<12} {'Train':>10} {'Test':>10} {'Gap':>10}")
+    print("-" * 50)
+    print(f"{'R²':<12} {train_r2:>10.4f} {test_r2:>10.4f} {train_r2 - test_r2:>10.4f}")
+    print(f"{'MSE':<12} {train_mse:>10.2f} {test_mse:>10.2f} {train_mse - test_mse:>10.2f}")
+    print(f"{'RMSE':<12} {train_rmse:>10.4f} {test_rmse:>10.4f} {train_rmse - test_rmse:>10.4f}")
+    print(f"{'MAE':<12} {train_mae:>10.4f} {test_mae:>10.4f} {train_mae - test_mae:>10.4f}")
+    print("-" * 50)
+    print(f"R²_adj (test)     : {test_r2_adj:.4f}")
+
+    for param, value in grid_search.best_params_.items():
+        print(f"  {param}: {value}")
+    print(f"\nBest CV R²: {grid_search.best_score_:.4f}")
+    
+    # Overfitting detection
+    status, detail, _, _ = check_overfitting_regression(train_r2, test_r2, test_r2_adj)
+    print(f"\n{status}: {detail}")
+
+def SVR_regressor(X_train, y_train, X_test, y_test):
+
+    # REFERENCE: https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVR.html
+    # The hyperparameters were selected after iterative trial-and-error experimentation.
+    parameters = {
+        'model__kernel': ['linear', 'rbf'],
+        'model__C': [0.1, 1, 10, 100],
+        'model__gamma': ['scale', 0.01, 0.1],
+        'model__epsilon': [0.01, 0.1, 0.2]
+    }
+
+    pipeline = Pipeline([("scaler", StandardScaler()), ("model", SVR())])
+    grid_search = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=1)
+    grid_search.fit(X_train, y_train)
+
+    y_train_pred = grid_search.predict(X_train)
+    y_test_pred = grid_search.predict(X_test)
+    # best_model = grid_search.best_estimator_
+
+    n = X_test.shape[0]
+    p = X_test.shape[1]
+    
+    # Train metrics
+    train_r2 = r2_score(y_train, y_train_pred)
+    train_mse = mean_squared_error(y_train, y_train_pred)
+    train_rmse = np.sqrt(train_mse)
+    train_mae = mean_absolute_error(y_train, y_train_pred)
+    
+    # Test metrics
+    test_r2 = r2_score(y_test, y_test_pred)
+    test_r2_adj = 1 - (1 - test_r2) * (n - 1) / (n - p - 1)
+    test_mse = mean_squared_error(y_test, y_test_pred)
+    test_rmse = np.sqrt(test_mse)
+    test_mae = mean_absolute_error(y_test, y_test_pred)
+
+    # Test metrics
+    test_r2 = r2_score(y_test, y_test_pred)
+    test_r2_adj = 1 - (1 - test_r2) * (n - 1) / (n - p - 1)
+    test_mse = mean_squared_error(y_test, y_test_pred)
+    test_rmse = np.sqrt(test_mse)
+    test_mae = mean_absolute_error(y_test, y_test_pred)
+
+    print("\n" + "=" * 50)
+    print("SVR - RESULTS")
     print("=" * 50)
     print(f"{'Metric':<12} {'Train':>10} {'Test':>10} {'Gap':>10}")
     print("-" * 50)
@@ -313,12 +375,12 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
     # The hyperparameters were selected after iterative trial-and-error experimentation.
     parameters = {
         'model__n_estimators': [100],
-        'model__max_depth': [6, 8, 10],
+        'model__max_depth': [8, 12],
         'model__min_samples_split': [10, 20],
-        'model__min_samples_leaf': [8, 12, 16],
+        'model__min_samples_leaf': [8, 12],
         'model__max_features': ['sqrt'],
         'model__class_weight': ['balanced'],
-        'model__ccp_alpha': [0.005, 0.01, 0.02]
+        'model__ccp_alpha': [0.005, 0.01]
     }
 
     pipeline = Pipeline([("model", RandomForestClassifier(random_state=7, n_jobs=-1))])
@@ -369,15 +431,14 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
     print(f"\n{status}: {detail}")
 
 def XGBoost_classifier(X_train, y_train, X_test, y_test):
-    
-    # === 1. ENCODE LABELS ===
 
     # XGBoost requires numeric labels for classification. Thus, string labels (e.g., 'High Achievers', 'Low Proficient') must be encoded as integers.
     encoder = LabelEncoder()
     y_train_encoded = encoder.fit_transform(y_train)
     y_test_encoded = encoder.transform(y_test)
     
-    # === 2. PARAMETERS ===
+    # The hyperparameters were selected after iterative trial-and-error experimentation.
+    # REFERENCE: https://www.datacamp.com/tutorial/ensemble-learning-python-guide?dc_referrer=https%3A%2F%2Fwww.google.com%2F 
     parameters = {
         'model__n_estimators': [30, 50],             
         'model__max_depth': [2, 3],                  
@@ -401,14 +462,12 @@ def XGBoost_classifier(X_train, y_train, X_test, y_test):
         verbose=1
     )
 
-    # === 3. TRAIN WITH ENCODED LABELS ===
     grid_search.fit(X_train, y_train_encoded)
 
-    # === 4. PREDICT ===
     y_train_pred_encoded = grid_search.predict(X_train)
     y_test_pred_encoded = grid_search.predict(X_test)
 
-    # === 5. METRICS WITH ENCODED LABELS ===
+    # Metrics
     train_accuracy = accuracy_score(y_train_encoded, y_train_pred_encoded)
     test_accuracy = accuracy_score(y_test_encoded, y_test_pred_encoded)
     train_f1 = f1_score(y_train_encoded, y_train_pred_encoded, average='weighted')
@@ -437,6 +496,70 @@ def XGBoost_classifier(X_train, y_train, X_test, y_test):
     status, detail, _, _ = check_overfitting_classification(train_accuracy, test_accuracy, train_f1, test_f1)
     print(f"\n{status}: {detail}")
 
+def SVC_classifier(X_train, y_train, X_test, y_test):
+    
+    # SVC requires numeric labels for classification. Thus, string labels (e.g., 'High Achievers', 'Low Proficient') must be encoded as integers.
+    encoder = LabelEncoder()
+    y_train_encoded = encoder.fit_transform(y_train)
+    y_test_encoded = encoder.transform(y_test)
+
+    # REFERENCE: https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC 
+    # Those final hyperparameters were selected after iterative trial-and-error experimentation.
+    parameters = {
+        'model__kernel': ['linear'],           
+        'model__C': [0.01, 0.1, 1.0],          
+        'model__class_weight': ['balanced']
+    }
+
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),  # SVC is sensitive to feature scaling
+        ("model", SVC(random_state=7, probability=True))
+    ])
+
+    grid_search = GridSearchCV(
+        pipeline,
+        parameters,
+        cv=3,
+        scoring='f1_weighted',
+        n_jobs=-1,
+        verbose=1
+    )
+
+    grid_search.fit(X_train, y_train_encoded)
+
+    y_train_pred = grid_search.predict(X_train)
+    y_test_pred = grid_search.predict(X_test)
+
+    # Train/test metrics
+    train_accuracy = accuracy_score(y_train_encoded, y_train_pred)
+    test_accuracy = accuracy_score(y_test_encoded, y_test_pred)
+    train_f1 = f1_score(y_train_encoded, y_train_pred, average='weighted')
+    test_f1 = f1_score(y_test_encoded, y_test_pred, average='weighted')
+
+    print("=" * 50)
+    print("SVC CLASSIFIER - RESULTS")
+    print("=" * 50)
+    print(f"{'Metric':<15} {'Train':>10} {'Test':>10} {'Gap':>10}")
+    print("-" * 50)
+    print(f"{'Accuracy':<15} {train_accuracy:>10.4f} {test_accuracy:>10.4f} {train_accuracy - test_accuracy:>10.4f}")
+    print(f"{'F1 (weighted)':<15} {train_f1:>10.4f} {test_f1:>10.4f} {train_f1 - test_f1:>10.4f}")
+    print("-" * 50)
+
+    for param, value in grid_search.best_params_.items():
+        print(f"  {param}: {value}")
+    print(f"\nBest CV F1: {grid_search.best_score_:.4f}")
+
+    print()
+    print("\nClassification Report (Test):")
+    print(classification_report(y_test_encoded, y_test_pred))
+    print("\nConfusion Matrix (Test):")
+    print(confusion_matrix(y_test_encoded, y_test_pred))
+
+    # Overfitting detection
+    status, detail, _, _ = check_overfitting_classification(train_accuracy, test_accuracy, train_f1, test_f1)
+    print(f"\n{status}: {detail}")
+
+
 def run_models(task, X_train, y_train, X_test, y_test, final_features_ranking, feature_names):
 
     for i in [5, 10, 15, 20]:
@@ -458,6 +581,9 @@ def run_models(task, X_train, y_train, X_test, y_test, final_features_ranking, f
             print()
             print(f"XGBOOST Regressor model for {i} features")
             XGBoost_regressor(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
+            print()
+            print(f"SVR model for {i} features")
+            SVR_regressor(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
 
         if task == 'classification':
             print()
@@ -469,3 +595,7 @@ def run_models(task, X_train, y_train, X_test, y_test, final_features_ranking, f
             print()
             print(f"XGBOOST Classifier for {i} features")
             XGBoost_classifier(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
+            print()
+            print(f"SVR model for {i} features")
+            SVC_classifier(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
+
