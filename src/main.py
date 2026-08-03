@@ -82,10 +82,10 @@ if __name__ == "__main__":
     y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
 
     #REGRESSION
-    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
-    run_models("regression", X_train_after_var_thresh, y_train, X_test_after_var_thresh, y_test, final_features_ranking, all_imputed_feature_names)
+    #(final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
+    #run_models("regression", X_train_after_var_thresh, y_train, X_test_after_var_thresh, y_test, final_features_ranking, all_imputed_feature_names)
 
     #CLASSIFICATION
-    #(final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
-    #run_models("classification", X_train_after_var_thresh, y_train_class, X_test_after_var_thresh, y_test_class, final_features_ranking, all_imputed_feature_names)
+    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
+    run_models("classification", X_train_after_var_thresh, y_train_class, X_test_after_var_thresh, y_test_class, final_features_ranking, all_imputed_feature_names)
 

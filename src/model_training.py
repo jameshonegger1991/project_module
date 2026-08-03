@@ -1,15 +1,16 @@
 import numpy as np
 import pandas as pd
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge, Lasso
+
+from xgboost import XGBClassifier, XGBRegressor
+
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.svm import SVR
-from xgboost import XGBRegressor
-from sklearn.metrics import f1_score, r2_score, mean_squared_error, mean_absolute_error
-from src.feature_selection import select_top_features
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.linear_model import LogisticRegression, Lasso
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
+from src.feature_selection import select_top_features
 
 ### === REGRESSION ===
 
@@ -152,6 +153,70 @@ def random_forest_regression(X_train, y_train, X_test, y_test):
     status, detail, _, _ = check_overfitting_regression(train_r2, test_r2, test_r2_adj)
     print(f"\n{status}: {detail}")
 
+def XGBoost_regressor(X_train, y_train, X_test, y_test):
+
+    # REFERENCE: https://xgboost.readthedocs.io/en/stable/parameter.html 
+    # The hyperparameters were selected after iterative trial-and-error experimentation.
+    parameters = {
+        'model__n_estimators': [50, 80],           
+        'model__max_depth': [3, 4],                
+        'model__learning_rate': [0.01, 0.03],      
+        'model__subsample': [0.5, 0.6],
+        'model__colsample_bytree': [0.4, 0.6],
+        'model__reg_alpha': [1.0, 2.0],            
+        'model__reg_lambda': [1.0, 2.0]
+        }
+
+    pipeline = Pipeline([("model", XGBRegressor( random_state=7, n_jobs=-1))])
+    grid_search = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=1)
+    grid_search.fit(X_train, y_train)
+
+    y_train_pred = grid_search.predict(X_train)
+    y_test_pred = grid_search.predict(X_test)
+    # best_model = grid_search.best_estimator_
+
+    n = X_test.shape[0]
+    p = X_test.shape[1]
+    
+    # Train metrics
+    train_r2 = r2_score(y_train, y_train_pred)
+    train_mse = mean_squared_error(y_train, y_train_pred)
+    train_rmse = np.sqrt(train_mse)
+    train_mae = mean_absolute_error(y_train, y_train_pred)
+    
+    # Test metrics
+    test_r2 = r2_score(y_test, y_test_pred)
+    test_r2_adj = 1 - (1 - test_r2) * (n - 1) / (n - p - 1)
+    test_mse = mean_squared_error(y_test, y_test_pred)
+    test_rmse = np.sqrt(test_mse)
+    test_mae = mean_absolute_error(y_test, y_test_pred)
+
+    # Test metrics
+    test_r2 = r2_score(y_test, y_test_pred)
+    test_r2_adj = 1 - (1 - test_r2) * (n - 1) / (n - p - 1)
+    test_mse = mean_squared_error(y_test, y_test_pred)
+    test_rmse = np.sqrt(test_mse)
+    test_mae = mean_absolute_error(y_test, y_test_pred)
+
+    print("\n" + "=" * 50)
+    print("XGBOOST REGRESSION - RESULTS")
+    print("=" * 50)
+    print(f"{'Metric':<12} {'Train':>10} {'Test':>10} {'Gap':>10}")
+    print("-" * 50)
+    print(f"{'R²':<12} {train_r2:>10.4f} {test_r2:>10.4f} {train_r2 - test_r2:>10.4f}")
+    print(f"{'MSE':<12} {train_mse:>10.2f} {test_mse:>10.2f} {train_mse - test_mse:>10.2f}")
+    print(f"{'RMSE':<12} {train_rmse:>10.4f} {test_rmse:>10.4f} {train_rmse - test_rmse:>10.4f}")
+    print(f"{'MAE':<12} {train_mae:>10.4f} {test_mae:>10.4f} {train_mae - test_mae:>10.4f}")
+    print("-" * 50)
+    print(f"R²_adj (test)     : {test_r2_adj:.4f}")
+
+    for param, value in grid_search.best_params_.items():
+        print(f"  {param}: {value}")
+    print(f"\nBest CV R²: {grid_search.best_score_:.4f}")
+    
+    # Overfitting detection
+    status, detail, _, _ = check_overfitting_regression(train_r2, test_r2, test_r2_adj)
+    print(f"\n{status}: {detail}")
 
 
 ### === CLASSIFICATION ===
@@ -303,7 +368,74 @@ def random_forest_classifier(X_train, y_train, X_test, y_test):
     status, detail, _, _ = check_overfitting_classification(train_accuracy, test_accuracy, train_f1, test_f1)
     print(f"\n{status}: {detail}")
 
+def XGBoost_classifier(X_train, y_train, X_test, y_test):
+    
+    # === 1. ENCODE LABELS ===
 
+    # XGBoost requires numeric labels for classification. Thus, string labels (e.g., 'High Achievers', 'Low Proficient') must be encoded as integers.
+    encoder = LabelEncoder()
+    y_train_encoded = encoder.fit_transform(y_train)
+    y_test_encoded = encoder.transform(y_test)
+    
+    # === 2. PARAMETERS ===
+    parameters = {
+        'model__n_estimators': [30, 50],             
+        'model__max_depth': [2, 3],                  
+        'model__learning_rate': [0.01, 0.02],        
+        'model__subsample': [0.4, 0.5],              
+        'model__colsample_bytree': [0.4, 0.5],       
+        'model__reg_alpha': [2.0, 5.0],              
+        'model__reg_lambda': [2.0, 5.0]              
+    }
+
+    pipeline = Pipeline([
+        ("model", XGBClassifier(random_state=7, n_jobs=-1, eval_metric='mlogloss'))
+    ])
+
+    grid_search = GridSearchCV(
+        pipeline,
+        parameters,
+        cv=3,
+        scoring='f1_weighted',
+        n_jobs=-1,
+        verbose=1
+    )
+
+    # === 3. TRAIN WITH ENCODED LABELS ===
+    grid_search.fit(X_train, y_train_encoded)
+
+    # === 4. PREDICT ===
+    y_train_pred_encoded = grid_search.predict(X_train)
+    y_test_pred_encoded = grid_search.predict(X_test)
+
+    # === 5. METRICS WITH ENCODED LABELS ===
+    train_accuracy = accuracy_score(y_train_encoded, y_train_pred_encoded)
+    test_accuracy = accuracy_score(y_test_encoded, y_test_pred_encoded)
+    train_f1 = f1_score(y_train_encoded, y_train_pred_encoded, average='weighted')
+    test_f1 = f1_score(y_test_encoded, y_test_pred_encoded, average='weighted')
+
+    print("=" * 50)
+    print("XGBoost CLASSIFIER - RESULTS")
+    print("=" * 50)
+    print(f"{'Metric':<15} {'Train':>10} {'Test':>10} {'Gap':>10}")
+    print("-" * 50)
+    print(f"{'Accuracy':<15} {train_accuracy:>10.4f} {test_accuracy:>10.4f} {train_accuracy - test_accuracy:>10.4f}")
+    print(f"{'F1 (weighted)':<15} {train_f1:>10.4f} {test_f1:>10.4f} {train_f1 - test_f1:>10.4f}")
+    print("-" * 50)
+
+    for param, value in grid_search.best_params_.items():
+        print(f"  {param}: {value}")
+    print(f"\nBest CV F1: {grid_search.best_score_:.4f}")
+
+    print()
+    print("\nClassification Report (Test):")
+    print(classification_report(y_test_encoded, y_test_pred_encoded))
+    print("\nConfusion Matrix (Test):")
+    print(confusion_matrix(y_test_encoded, y_test_pred_encoded))
+
+    # Overfitting detection
+    status, detail, _, _ = check_overfitting_classification(train_accuracy, test_accuracy, train_f1, test_f1)
+    print(f"\n{status}: {detail}")
 
 def run_models(task, X_train, y_train, X_test, y_test, final_features_ranking, feature_names):
 
@@ -323,11 +455,17 @@ def run_models(task, X_train, y_train, X_test, y_test, final_features_ranking, f
             print()
             print(f"Random forest regressor model for {i} features")
             random_forest_regression(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
+            print()
+            print(f"XGBOOST Regressor model for {i} features")
+            XGBoost_regressor(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
 
         if task == 'classification':
             print()
             print(f"Logistic regression Model for {i} features")
             logistic_regression(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
             print()
-            print(f"Random forest regressor model for {i} features")
+            print(f"Random forest Classifier model for {i} features")
             random_forest_classifier(X_train_with_top_features, y_train, X_test_with_top_features, y_test)
+            print()
+            print(f"XGBOOST Classifier for {i} features")
+            XGBoost_classifier(X_train_with_top_features, y_train, X_test_with_top_features, y_test)

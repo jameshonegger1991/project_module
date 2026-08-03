@@ -251,6 +251,7 @@ def display_correlations_between_features(df: pd.DataFrame, target: str = "PV1MA
 
 
 # ==== FEATURE SELECTION ==== 
+
 def display_variance_threshold(ranking_VThresh: pd.DataFrame, threshold = VARIANCE_THRESHOLD, selected_cols: list = [], feature_names: list = []):
     print("\n" + "=" * 80)
     print(f"Variance Threshold (threshold = {threshold}) : {len(selected_cols)}/{len(feature_names)} kept")
