@@ -13,6 +13,8 @@ from sklearn.svm import SVC, SVR
 from src.feature_selection import select_top_features
 from sklearn.utils.class_weight import compute_sample_weight
 
+from src.tables import display_results
+
 
 def run_models(X_train, y_train, X_test, y_test, model_names, task):
     """
@@ -119,7 +121,8 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 best_alpha = model.named_steps['model'].best_params_['alpha']
                 print(f"Best alpha        : {best_alpha}")
                 print(f"Features selected : {n_selected}/{p}")
-            
+
+            """""
             # Display results
             print("=" * 50)
             print(f"{name} (REGRESSION) - RESULTS")
@@ -135,11 +138,13 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             
             status, detail, _, _ = check_overfitting_regression(train_r2, test_r2, test_r2_adj)
             print(f"\n{status}: {detail}")
+            """
             
             # Store all metrics in results dictionary for later aggregation
             results[name] = {
                 'model': model,
                 'y_pred': y_test_pred,
+                'type': 'regression',
                 # Training metrics
                 'train_r2': train_r2,
                 'train_mse': train_mse,
@@ -292,7 +297,6 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 continue
             
             # Train
-
             if name == "XGBoost" and encoder is not None:
                 model.fit(X_train, y_train_use, model__sample_weight=sample_weights)
             else:
@@ -322,7 +326,8 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             test_precision_macro = precision_score(y_test_use, y_test_pred, average='macro')
             test_recall_weighted = recall_score(y_test_use, y_test_pred, average='weighted')
             test_recall_macro = recall_score(y_test_use, y_test_pred, average='macro')
-            
+
+            """"
             print("=" * 50)
             print(f"{name} (CLASSIFICATION) - RESULTS")
             print("=" * 50)
@@ -343,10 +348,13 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             
             status, detail, _, _ = check_overfitting_classification(train_accuracy, test_accuracy, train_f1_weighted, test_f1_weighted)
             print(f"\n{status}: {detail}")
-            
+            """
+
             results[name] = {
                 'model': model,
                 'y_pred': y_test_pred_display,
+                'y_test_true': y_test_true_display,
+                'type': 'classification',
                 'train_accuracy': train_accuracy,
                 'train_f1_weighted': train_f1_weighted,
                 'train_f1_macro': train_f1_macro,
@@ -359,7 +367,9 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 'test_recall_macro': test_recall_macro,
                 'gap_accuracy': train_accuracy - test_accuracy,
                 'gap_f1': train_f1_weighted - test_f1_weighted,
-                'gap': max(train_accuracy - test_accuracy, train_f1_weighted - test_f1_weighted)
+                'gap': max(train_accuracy - test_accuracy, train_f1_weighted - test_f1_weighted),
+                'best_params': model.best_params_,      
+                'best_cv_score': model.best_score_
             }
     
     else:
@@ -367,74 +377,12 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
     
     return results
 
-def check_overfitting_regression(train_r2, test_r2, test_r2_adj=None):
-
-    # Overfitting check based on heuristics (INSPIRATION: https://datascience.stackexchange.com/questions/77298/how-many-ways-are-there-to-check-model-overfitting)
-    
-    gap = train_r2 - test_r2
-    
-    if test_r2_adj is not None:
-        adj_gap = train_r2 - test_r2_adj
-    else:
-        adj_gap = gap
-
-    # # A 10% R² gap is a clear overfitting signal, 5% can be considered as a warning zone whiles negative gaps below -5% are rare enough to be noted as positive.
-    if gap > 0.10:
-        status = "Overfitting"
-        detail = f"R² gap = {gap:.4f} (> 0.10)"
-    elif gap > 0.05:
-        status = "Mild overfitting"
-        detail = f"R² gap = {gap:.4f}"
-    elif gap < -0.05:
-        status = "Good generalisation (Test R² > Train R²)"
-        detail = f"R² gap = {gap:.4f}"
-    else:
-        status = "Good generalisation"
-        detail = f"R² gap = {gap:.4f}"
-    
-    return status, detail, gap, adj_gap
-
-def check_overfitting_classification(train_acc, test_acc, train_f1, test_f1):
-
-    # Overfitting check based on empirical classification heuristics.
-    # In that situation, the threshold is stricter (0.05) than regression (0.10) because classification 
-    # metrics are strictly bounded between 0 and 1. This means that in such situation, a 5% drop 
-    # represents a critical loss of operational predictive power.
-    acc_gap = train_acc - test_acc
-    f1_gap = train_f1 - test_f1
-    
-    gap = max(acc_gap, f1_gap)
-    
-    if gap > 0.05:
-        status = "Overfitting"
-        detail = f"Acc gap = {acc_gap:.4f}, F1 gap = {f1_gap:.4f}"
-    elif gap > 0.02:
-        status = "Mild overfitting"
-        detail = f"Acc gap = {acc_gap:.4f}, F1 gap = {f1_gap:.4f}"
-    elif gap < -0.03: # A negative gap exceeding 3% is relatively rare in practice and suggests that the model generalises surprisingly well.
-        status = "Good generalisation (Test > Train)"
-        detail = f"Gap = {gap:.4f}"
-    else:
-        status = "Good generalisation"
-        detail = f"Gap = {gap:.4f}"
-    
-    return status, detail, acc_gap, f1_gap
-
 def evaluate_k_values(X_train, y_train, X_test, y_test, final_features_ranking, feature_names, model_names, task, k_values=[5, 10, 15, 20]):
     """
     Evaluate models for different values of k (number of features) and return a DataFrame + a dictionary with all results.
-    
-    Returns:
-    - results_df: DataFrame with all metrics for each model and k
-    - all_results: Complete dictionary with models, predictions, and features
     """
-    
     all_results = {}
     rows = []
-    
-    print("\n" + "=" * 80)
-    print(f"EVALUATING MODELS FOR DIFFERENT K VALUES ({task.upper()})")
-    print("=" * 80)
     
     for k in k_values:
         print(f"\n{'#'*60}")
@@ -448,11 +396,6 @@ def evaluate_k_values(X_train, y_train, X_test, y_test, final_features_ranking, 
         
         X_train_k = X_train[:, indices]
         X_test_k = X_test[:, indices]
-        
-        # Display selected features
-        print(f"\nTop {k} features selected:")
-        for i, f in enumerate(top_k_features, 1):
-            print(f"  {i}. {f}")
         
         # Run models
         results_k = run_models(
@@ -505,18 +448,4 @@ def evaluate_k_values(X_train, y_train, X_test, y_test, final_features_ranking, 
     
     # Create DataFrame
     results_df = pd.DataFrame(rows)
-    
-    # Display summary
-    print("\n" + "=" * 80)
-    print(f"SUMMARY - {task.upper()} METRICS")
-    print("=" * 80)
-    
-    if task == 'regression':
-        display_cols = ['k', 'Model', 'R²_test', 'RMSE_test', 'MAE_test', 'Gap_R²']
-        if 'Features_Selected' in results_df.columns:
-            display_cols.append('Features_Selected')
-        print(results_df[display_cols].to_string(index=False))
-    else:
-        print(results_df[['k', 'Model', 'Accuracy_test', 'F1_weighted_test', 'Gap_Accuracy']].to_string(index=False))
-    
     return results_df, all_results

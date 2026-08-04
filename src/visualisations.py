@@ -39,7 +39,7 @@ def export_histograms(df: pd.DataFrame, title: str = "Histogram"):
 
 def export_violin_plots(df: pd.DataFrame, title: str = "Violin Plot"):
     """
-    Save violin plots for all numeric columns to 'plots/univariate_plots/violin_plots/'.
+    Save violin plots for all numeric columns to 'outputs/plots/univariate_plots/violin_plots/'.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate violin plots.")
@@ -50,7 +50,7 @@ def export_violin_plots(df: pd.DataFrame, title: str = "Violin Plot"):
         print("No numeric columns found to generate violin plots.")
         return
     
-    os.makedirs("plots/univariate_plots/violin_plots", exist_ok=True)
+    os.makedirs("outputs/plots/univariate_plots/violin_plots", exist_ok=True)
     
     for col in numeric_cols:
         plt.figure(figsize=(8, 4))
@@ -66,14 +66,14 @@ def export_violin_plots(df: pd.DataFrame, title: str = "Violin Plot"):
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         
-        plt.savefig(f"plots/univariate_plots/violin_plots/{col}_{title}.png", dpi=150, bbox_inches='tight')
+        plt.savefig(f"outputs/plots/univariate_plots/violin_plots/{col}_{title}.png", dpi=150, bbox_inches='tight')
         plt.close()
     
-    print(f"{len(numeric_cols)} violin plots saved to plots/univariate_plots/violin_plots/")
+    print(f"{len(numeric_cols)} violin plots saved to outputs/plots/univariate_plots/violin_plots/")
 
 def export_barplots(df: pd.DataFrame, title: str = "Bar Plot"):
     """
-    Generate bar plots for all categorical features and save them to 'plots/univariate_plots/barplots/'.
+    Generate bar plots for all categorical features and save them to 'outputs/plots/univariate_plots/barplots/'.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate bar plots.")
@@ -85,7 +85,7 @@ def export_barplots(df: pd.DataFrame, title: str = "Bar Plot"):
         return
 
     
-    folder_path = "plots/univariate_plots/barplots"
+    folder_path = "outputs/plots/univariate_plots/barplots"
     os.makedirs(folder_path, exist_ok=True)
     
     for col in categorical_cols:

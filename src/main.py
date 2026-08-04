@@ -18,6 +18,9 @@ from src.feature_selection import (
 from src.tables import (
     display_correlations_between_features,
     display_correlations_with_target,
+    display_detailed_results_by_k,
+    display_results,
+    display_summary,
     generate_missing_values_report,
     get_descriptive_statistics,
 )
@@ -98,7 +101,6 @@ if __name__ == "__main__":
     (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
 
     # 5. ========= MODEL TRAINING ===========
-    """""
     print("\n" + "=" * 80)
     print("REGRESSION MODELS EVALUATION")
     print("=" * 80)
@@ -114,7 +116,9 @@ if __name__ == "__main__":
         k_values=[5, 10, 15, 20]
     )
     
-    
+    display_detailed_results_by_k(regression_all_results_dic)
+    display_summary(regression_results_df, task='regression')
+
     # Save regression results DataFrame to tables folder
     regression_results_df.to_csv(os.path.join(dataframes_dir, 'regression_results_by_k.csv'), index=False)
     print(f" Regression results saved to '{os.path.join(dataframes_dir, 'regression_results_by_k.csv')}'")
@@ -122,7 +126,7 @@ if __name__ == "__main__":
     # Save regression all_results dictionary to models folder
     joblib.dump(regression_all_results_dic, os.path.join(models_dir, 'regression_all_results.pkl'))
     print(f" Regression all_results saved to '{os.path.join(models_dir, 'regression_all_results.pkl')}'")
-    """""
+    """
 
     print("\n" + "=" * 80)
     print("CLASSIFICATION MODELS EVALUATION")
@@ -138,6 +142,9 @@ if __name__ == "__main__":
             k_values=[5, 10, 15, 20]
         )
 
+    display_detailed_results_by_k(classification_all_results_dic)
+    display_summary(classification_results_df, task='classification')
+
     # Save classification results DataFrame to tables folder
     classification_results_df.to_csv(os.path.join(dataframes_dir, 'classification_results_by_k.csv'), index=False)
     print(f"Classification results saved to '{os.path.join(dataframes_dir, 'classification_results_by_k.csv')}'")
@@ -145,3 +152,4 @@ if __name__ == "__main__":
     # Save regression all_results dictionary to models folder
     joblib.dump(classification_all_results_dic, os.path.join(models_dir, 'classification_all_results.pkl'))
     print(f"Classification all_results saved to '{os.path.join(models_dir, 'classification_all_results.pkl')}'")
+    """

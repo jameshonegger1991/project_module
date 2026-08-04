@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.metrics import classification_report, confusion_matrix
 from src.dataset_cleaning_and_preprocessing import get_missing_percentages_per_column
 from src.dataset_cleaning_and_preprocessing import get_missing_percentages_per_row
 from src.config import VARIANCE_THRESHOLD
@@ -300,3 +301,166 @@ def display_top_features(top_features: list, k: int):
     print()
     for i, feature in enumerate(top_features, 1):
         print(f"  {i}. {feature}")
+
+
+# ==== MODEL TRAINING ====
+
+#utils
+def check_overfitting_regression(train_r2, test_r2, test_r2_adj=None):
+
+    # Overfitting check based on heuristics (INSPIRATION: https://datascience.stackexchange.com/questions/77298/how-many-ways-are-there-to-check-model-overfitting)
+    
+    gap = train_r2 - test_r2
+    
+    if test_r2_adj is not None:
+        adj_gap = train_r2 - test_r2_adj
+    else:
+        adj_gap = gap
+
+    # # A 10% R² gap is a clear overfitting signal, 5% can be considered as a warning zone whiles negative gaps below -5% are rare enough to be noted as positive.
+    if gap > 0.10:
+        status = "Overfitting"
+        detail = f"R² gap = {gap:.4f} (> 0.10)"
+    elif gap > 0.05:
+        status = "Mild overfitting"
+        detail = f"R² gap = {gap:.4f}"
+    elif gap < -0.05:
+        status = "Good generalisation (Test R² > Train R²)"
+        detail = f"R² gap = {gap:.4f}"
+    else:
+        status = "Good generalisation"
+        detail = f"R² gap = {gap:.4f}"
+    
+    return status, detail, gap, adj_gap
+
+#utils
+def check_overfitting_classification(train_acc, test_acc, train_f1, test_f1):
+
+    # Overfitting check based on empirical classification heuristics.
+    # In that situation, the threshold is stricter (0.05) than regression (0.10) because classification 
+    # metrics are strictly bounded between 0 and 1. This means that in such situation, a 5% drop 
+    # represents a critical loss of operational predictive power.
+    acc_gap = train_acc - test_acc
+    f1_gap = train_f1 - test_f1
+    
+    gap = max(acc_gap, f1_gap)
+    
+    if gap > 0.05:
+        status = "Overfitting"
+        detail = f"Acc gap = {acc_gap:.4f}, F1 gap = {f1_gap:.4f}"
+    elif gap > 0.02:
+        status = "Mild overfitting"
+        detail = f"Acc gap = {acc_gap:.4f}, F1 gap = {f1_gap:.4f}"
+    elif gap < -0.03: # A negative gap exceeding 3% is relatively rare in practice and suggests that the model generalises surprisingly well.
+        status = "Good generalisation (Test > Train)"
+        detail = f"Gap = {gap:.4f}"
+    else:
+        status = "Good generalisation"
+        detail = f"Gap = {gap:.4f}"
+    
+    return status, detail, acc_gap, f1_gap
+
+def display_results(results, model_names=None):
+    """
+    Display results for all models in the results dictionary.
+    """
+    if model_names is None:
+        model_names = list(results.keys())
+    
+    for name in model_names:
+        if name not in results:
+            print(f"Model '{name}' not found in results.")
+            continue
+        
+        result = results[name]
+        
+        if result['type'] == 'regression':
+            _display_regression_result(name, result)
+        else:
+            _display_classification_result(name, result)
+
+def _display_regression_result(name, result):
+    """Internal function to display a single regression result."""
+    print("=" * 50)
+    print(f"{name} (REGRESSION) - RESULTS")
+    print("=" * 50)
+    print(f"{'Metric':<12} {'Train':>10} {'Test':>10} {'Gap':>10}")
+    print("-" * 50)
+    print(f"{'R²':<12} {result['train_r2']:>10.4f} {result['test_r2']:>10.4f} {result['gap_r2']:>10.4f}")
+    print(f"{'MSE':<12} {result['train_mse']:>10.2f} {result['test_mse']:>10.2f} {result['train_mse'] - result['test_mse']:>10.2f}")
+    print(f"{'RMSE':<12} {result['train_rmse']:>10.4f} {result['test_rmse']:>10.4f} {result['train_rmse'] - result['test_rmse']:>10.4f}")
+    print(f"{'MAE':<12} {result['train_mae']:>10.4f} {result['test_mae']:>10.4f} {result['train_mae'] - result['test_mae']:>10.4f}")
+    print("-" * 50)
+    print(f"R²_adj (test)     : {result['test_r2_adj']:.4f}")
+    
+    if result.get('is_lasso'):
+        print(f"Best alpha        : {result['best_alpha']}")
+        print(f"Features selected : {result['n_selected']}/{result['p']}")
+    
+    # Overfitting status
+    status, detail, _, _ = check_overfitting_regression(
+        result['train_r2'], result['test_r2'], result['test_r2_adj']
+    )
+    print(f"\n{status}: {detail}")
+
+def _display_classification_result(name, result):
+    """Internal function to display a single classification result."""
+    print("=" * 50)
+    print(f"{name} (CLASSIFICATION) - RESULTS")
+    print("=" * 50)
+    print(f"{'Metric':<15} {'Train':>10} {'Test':>10} {'Gap':>10}")
+    print("-" * 50)
+    print(f"{'Accuracy':<15} {result['train_accuracy']:>10.4f} {result['test_accuracy']:>10.4f} {result['gap_accuracy']:>10.4f}")
+    print(f"{'F1 (weighted)':<15} {result['train_f1_weighted']:>10.4f} {result['test_f1_weighted']:>10.4f} {result['gap_f1']:>10.4f}")
+    print("-" * 50)
+    
+    # Classification report with original labels
+    print("\nClassification Report (Test):")
+    print(classification_report(result['y_test_true'], result['y_pred']))
+    print("\nConfusion Matrix (Test):")
+    print(confusion_matrix(result['y_test_true'], result['y_pred']))
+    print()
+    print(f"Best parameters: {result['best_params']}")
+    print(f"Best CV F1-score: {result['best_cv_score']:.4f}")
+    
+    # Overfitting status
+    status, detail, _, _ = check_overfitting_classification(
+        result['train_accuracy'], result['test_accuracy'],
+        result['train_f1_weighted'], result['test_f1_weighted']
+    )
+    print(f"\n{status}: {detail}")
+    print()
+
+def display_detailed_results_by_k(all_results, k_values=None):
+    """
+    Display detailed results for each k.
+    """
+    if k_values is None:
+        k_values = sorted(all_results.keys())
+    
+    for k in k_values:
+        print(f"\n{'#'*60}")
+        print(f"# DETAILED RESULTS FOR K = {k} FEATURES")
+        print(f"{'#'*60}")
+        
+        features = all_results[k]['features']
+        display_top_features(features, k)
+        
+        results_k = all_results[k]['results']
+        display_results(results_k)
+
+def display_summary(results_df, task):
+    """
+    Display summary of metrics from results_df.
+    """
+    print("\n" + "=" * 80)
+    print(f"SUMMARY - {task.upper()} METRICS")
+    print("=" * 80)
+    
+    if task == 'regression':
+        display_cols = ['k', 'Model', 'R²_test', 'RMSE_test', 'MAE_test', 'Gap_R²']
+        if 'Features_Selected' in results_df.columns:
+            display_cols.append('Features_Selected')
+        print(results_df[display_cols].to_string(index=False))
+    else:
+        print(results_df[['k', 'Model', 'Accuracy_test', 'F1_weighted_test', 'Gap_Accuracy']].to_string(index=False))
