@@ -18,7 +18,8 @@ from src.tables import display_results
 
 def run_models(X_train, y_train, X_test, y_test, model_names, task):
     """
-    Run multiple models for regression or classification and return a dictionary with trained models, predictions and all metrics.
+    It trains and evaluates multiple models for regression or classification tasks 
+    and returns the outputs into a dictionary containing the fitted models, predictions, and performance metrics.
     """
     
     results = {}
@@ -144,6 +145,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             results[name] = {
                 'model': model,
                 'y_pred': y_test_pred,
+                'y_test_true': y_test, 
                 'type': 'regression',
                 # Training metrics
                 'train_r2': train_r2,

@@ -24,8 +24,7 @@ from src.tables import (
 
 def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESHOLD):
     """
-    Applies variance thresholding to select features and generates a report and returns a tuple
-    containing the report DataFrame and a list of selected feature names.
+    Selects features whose variance is above the specified threshold and returns the results as a DataFrame.
     """
 
     if X_train.shape[1] != len(feature_names):
@@ -53,9 +52,7 @@ def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
     """
 
     # modular feature selection test able to work either with regression or classification tasks.
-    # Mutual information test has the advantage to be model-independent. A higher MI score indicates a stronger dependency between 
-    # the feature and the target variable.
-    # It quantifies the amount of information obtained about one random variable by observing the other.
+    # Mutual information test has the advantage to be model-independent.
     # REFERENCES:
     # - https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.mutual_info_regression.html
     # - https://medium.com/@suvendulearns/decoding-mutual-information-mi-a-guide-for-machine-learning-practitioners-b0f0ca0b30c9  
@@ -68,14 +65,14 @@ def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
         raise ValueError("task must be 'regression' or 'classification'")
 
     ranking_df = pd.DataFrame({'Feature': feature_names, 'MI_Score': mi_scores})
-    ranking_df['Ranking'] = (ranking_df['MI_Score'].rank(method='min', ascending=False).astype(int)) # Ranks features based on MI scores, assigning the same rank to tied scores.
-    ranking_df = ranking_df.sort_values(['Ranking', 'Feature']).reset_index(drop=True) # Sorts the DataFrame by rank and then by feature name, resetting the index.
+    ranking_df['Ranking'] = (ranking_df['MI_Score'].rank(method='min', ascending=False).astype(int))
+    ranking_df = ranking_df.sort_values(['Ranking', 'Feature']).reset_index(drop=True) 
     
     return ranking_df
 
 def apply_ANOVA(X_train, y_train, feature_names, task ='regression'):
     """
-    Applies the ANOVA F-test to features and returns a complete ranking (df) with feature names, F-scores, p-values, and their ranking.
+    Return a complete ranking (df) with feature names, F-scores, p-values, and their ranking.
     """
     
     if task == 'regression':
@@ -85,24 +82,20 @@ def apply_ANOVA(X_train, y_train, feature_names, task ='regression'):
     else:
         raise ValueError("task must be 'regression' or 'classification'")
     
-    # Créer le DataFrame avec les scores
     ranking_df = pd.DataFrame({
         'Feature': feature_names,
         'F_Score': f_scores,
         'P_Value': p_values
     })
     
-    # Sort by F-Score in descending order (from largest to smallest)
     ranking_df = ranking_df.sort_values('F_Score', ascending = False)
-    
-    # Add the ranking (1 = best F-score)
     ranking_df['Ranking'] = range(1, len(ranking_df) + 1)
     
     return ranking_df
 
 def apply_rfe(X_train, y_train, feature_names, task ='regression', step = 1):
     """
-    Performs Recursive Feature Elimination (RFE) with a RandomForest estimator to return a complete feature ranking with feature names. 
+    Performs RFE with a RandomForest estimator to return a complete feature ranking with feature names. 
     """
     
     if task == 'regression':
@@ -112,10 +105,7 @@ def apply_rfe(X_train, y_train, feature_names, task ='regression', step = 1):
     else:
         raise ValueError("task must be 'regression' or 'classification'")
     
-    # n_features_to_select = 1 to obtain a complete ranking.
-    # If n_features_to_select were greater than 1, RFE would stop once that number of features was reached,
-    # and all remaining (non-eliminated) features would have the same rank (1),
-    # thus not providing a distinct ranking for all features.
+    # RFE must eliminate down to one feature to generate a complete distinct ranking because stopping earlier would leave all remaining features at rank 1.
     selector = RFE(estimator = estimator, n_features_to_select = 1, step = step)
     selector.fit(X_train, y_train)
     
@@ -128,11 +118,7 @@ def apply_rfe(X_train, y_train, feature_names, task ='regression', step = 1):
 
 def summarise_feature_rankings(ranking_dfs, method_names = None):
     """
-    Combines multiple feature rankings into a single final ranking and returns it as a DataFrame that contains:
-    - features
-    - their individual rankings from each method
-    - the sum of their ranks
-    - a final combined ranking
+    Combines multiple feature rankings into a single final ranking.
     """
     
     if method_names is None:
@@ -149,12 +135,7 @@ def summarise_feature_rankings(ranking_dfs, method_names = None):
     
     combined_df['Sum of ranks'] = combined_df[method_names].sum(axis=1)
     
-    # Calculates the final ranking by assigning a rank (1 = best) based on the sum of ranks. The `.rank()` method converts
-    # the numerical 'Sum of ranks' into an ordered ranking.
-    # The method='min' is chosen for the following reason: if multiple features have the same 'Sum of ranks',
-    # they will all be assigned the "lowest" rank that any of them would have received. For example, if two features
-    # are tied for what would be the 2nd and 3rd positions, both will receive rank 2. This ensures a consistent
-    # and unambiguous ranking for all tied values and gives the assurance that no significative feature is wrongly ranked.
+    # Ex-aequo features get the minimum rank.
     # REFERENCE: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.rank.html 
     combined_df['Final ranking'] = combined_df['Sum of ranks'].rank(method='min').astype(int)
     combined_df = combined_df.sort_values('Final ranking')
@@ -177,7 +158,9 @@ def select_top_features(combined_rankings, k = 20):
     return top_features, k
 
 def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_threshold = VARIANCE_THRESHOLD, task: str = 'regression'):
-
+    """
+    Runs the full feature selection pipeline and returns the final ranking, individual ranking dataframes, and the filtered datasets.
+    """
     variance_treshold_df, selected_columns_var_thresh, threshold = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
     display_variance_threshold(variance_treshold_df, threshold, selected_columns_var_thresh, feature_names)
 
@@ -200,4 +183,4 @@ def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_
     #top_features, k = select_top_features(final_features_ranking, 10)
     #display_top_features(top_features, k)
 
-    return final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh
+    return final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh

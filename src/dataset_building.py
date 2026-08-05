@@ -4,10 +4,9 @@ import os
 import warnings
 from src.config import DATA_DIR, DATASET_DIR
 
-# Suppress warnings to avoid cluttering output, especially from pandas or SPSS reader
 warnings.filterwarnings("ignore")
 
-def check_datasets_availability() -> bool:
+def check_datasets_availability():
     """
     Load PISA 2022 datasets from local files.
 
@@ -21,7 +20,6 @@ def check_datasets_availability() -> bool:
     student_file = os.path.join(DATA_DIR, "CY08MSP_STU_QQQ.sav")
     school_file = os.path.join(DATA_DIR, "CY08MSP_SCH_QQQ.sav")
 
-    # Check if files exist
     missing = []
     if not os.path.exists(student_file):
         missing.append("CY08MSP_STU_QQQ.sav (1.97 GB)")
@@ -42,20 +40,12 @@ def check_datasets_availability() -> bool:
         print("="*60 + "\n")
         return False
     
-    # Load datasets
     print("All the requested datasets are in the required directory. ✔")
     return True
 
-def load_pisa_datasets() -> tuple:
+def load_pisa_datasets():
     """
     Load PISA 2022 datasets from local files.
-    It first checks for the availability of the .sav files.
-    If .csv versions of the datasets exist, they are loaded for faster processing.
-    Otherwise, the .sav files are loaded using pandas.read_spss and then saved
-    as .csv files for future faster loading.
-
-    Returns:
-    Automatically converts to CSV for faster future loading.
     """
 
     student_sav = os.path.join(DATA_DIR, "CY08MSP_STU_QQQ.sav")
@@ -89,14 +79,14 @@ def load_pisa_datasets() -> tuple:
     
     return df_student, df_school
 
-def filter_dataset_by_country(df: pd.DataFrame, country: str) -> pd.DataFrame:
+def filter_dataset_by_country(df: pd.DataFrame, country: str):
     """
-    Filters a DataFrame to include only records from a specified country and returns a new DataFrame containing only the records for the specified country.
+    Filters a DataFrame to include only records from a specified country.
     """
-    df_filtered_by_country = df.query("CNT == @country") #SOURCE: PYTHON DATASCIENCE HANDBOOK (p. 213)
+    df_filtered_by_country = df.query("CNT == @country") 
     return df_filtered_by_country
 
-def merge_datasets_by_school(df_student: pd.DataFrame, df_school: pd.DataFrame) -> pd.DataFrame:
+def merge_datasets_by_school(df_student: pd.DataFrame, df_school: pd.DataFrame):
     """
     Merge student and school datasets (csv format) by school. 
     It uses the common key 'CNTSCHID' (school ID).
@@ -108,9 +98,7 @@ def merge_datasets_by_school(df_student: pd.DataFrame, df_school: pd.DataFrame) 
 
 def build_swiss_merged_dataset():
     """
-    Builds the merged dataset for Switzerland by loading PISA student and school data,
-    filtering for Switzerland, and then merging them based on school ID.
-    The resulting merged dataset is saved as 'swiss_merged_dataset.csv' in the 'data' directory.
+    Builds the merged dataset for Switzerland by loading PISA student and school data.
     """
     df_student, df_school = load_pisa_datasets()
     
@@ -133,9 +121,6 @@ def build_swiss_merged_dataset():
 def reduced_swiss_dataset()-> pd.DataFrame:
     """
     Loads the full Swiss merged dataset and reduces it to a predefined set of important features.
-    If the 'swiss_merged_dataset.csv' file does not exist, it calls `build_swiss_merged_dataset`
-    to create it first. The reduced dataset is saved as 'swiss_reduced_dataset.csv' 
-    in the 'src' directory and returned.
     """
     file_path = os.path.join(DATA_DIR, "swiss_merged_dataset.csv")
     
@@ -147,7 +132,6 @@ def reduced_swiss_dataset()-> pd.DataFrame:
     df = pd.read_csv(file_path)
     print(f"Original shape: {df.shape}")
     
-    # Important and useful selected features (see Project report)
     important_columns = [
         'PV1MATH',         # Mathematics performance score (first plausible value. Target)
         'CNTSCHID',        # School ID (required to build MEAN_ESCS)
@@ -174,7 +158,6 @@ def reduced_swiss_dataset()-> pd.DataFrame:
         'ESCS',            # Index of economic, social and cultural status (required to build MEAN_ESCS)
     ]
     
-    # Filter the DataFrame to keep only the important columns that actually exist
     existing_columns = [col for col in important_columns if col in df.columns]
     
     if existing_columns:
@@ -187,7 +170,6 @@ def reduced_swiss_dataset()-> pd.DataFrame:
     
     print(df_reduced.head())
 
-    #Save the swiss merged dataset in csv format
     print(f"Saving reduced swiss dataset in the src directory...")
     os.makedirs(DATASET_DIR, exist_ok=True)
     reduced_path = os.path.join(DATASET_DIR, "swiss_reduced_dataset.csv")

@@ -32,6 +32,8 @@ from src.visualisations import (
     export_barplots,
     export_histograms,
     export_violin_plots,
+    plot_multiple_metrics_vs_features,
+    plot_residuals_from_all_results,
 )
 from src.model_training import evaluate_k_values, run_models
 
@@ -89,18 +91,19 @@ if __name__ == "__main__":
     #display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
 
     # 4. ========== FEATURE SELECTION ==========
-
+    """
     #y_train/test for classification task
     y_train_class = pd.cut(y_train, bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
     y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
 
     # regression
-    #(final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
+    #(final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
 
     #classification
-    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
+    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
 
     # 5. ========= MODEL TRAINING ===========
+    
     print("\n" + "=" * 80)
     print("REGRESSION MODELS EVALUATION")
     print("=" * 80)
@@ -110,7 +113,7 @@ if __name__ == "__main__":
     regression_results_df, regression_all_results_dic = evaluate_k_values(
         X_train_after_var_thresh, y_train, X_test_after_var_thresh, y_test,
         final_features_ranking = final_features_ranking,
-        feature_names = all_imputed_feature_names,
+        feature_names = selected_columns_var_thresh,
         model_names=['LR', 'RF', 'XGBoost', 'SVR'],
         task='regression',
         k_values=[5, 10, 15, 20]
@@ -126,6 +129,12 @@ if __name__ == "__main__":
     # Save regression all_results dictionary to models folder
     joblib.dump(regression_all_results_dic, os.path.join(models_dir, 'regression_all_results.pkl'))
     print(f" Regression all_results saved to '{os.path.join(models_dir, 'regression_all_results.pkl')}'")
+    """
+    regression_results_df = pd.read_csv(os.path.join(dataframes_dir, 'regression_results_by_k.csv'))
+    regression_all_results_dic = joblib.load(os.path.join(models_dir, 'regression_all_results.pkl'))
+
+    plot_multiple_metrics_vs_features(regression_results_df, task='regression', save_dir='outputs/plots')
+    plot_residuals_from_all_results(regression_all_results_dic, k_chosen=10)
     """
 
     print("\n" + "=" * 80)

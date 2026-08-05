@@ -5,7 +5,7 @@ from src.dataset_cleaning_and_preprocessing import get_missing_percentages_per_r
 from src.config import VARIANCE_THRESHOLD
 
 
-def generate_missing_values_report(df: pd.DataFrame, threshold: float, title: str) -> None:
+def generate_missing_values_report(df, threshold, title):
     """
     Generate a comprehensive missing values report for both columns and rows.
     
@@ -69,7 +69,7 @@ def generate_missing_values_report(df: pd.DataFrame, threshold: float, title: st
     print(f"Overall missing %: {(total_missing / total_cells) * 100:.1f}%")
     print("=" * 80 + "\n")
 
-def get_descriptive_statistics(df: pd.DataFrame, title: str) -> None:
+def get_descriptive_statistics(df, title):
     """
     Display descriptive statistics for a DataFrame.
     It includes shape, descriptive stats, head, info, and skewness.
@@ -129,7 +129,7 @@ def get_descriptive_statistics(df: pd.DataFrame, title: str) -> None:
     
     print("=" * 80 + "\n")
 
-def display_correlations_with_target(df: pd.DataFrame, target: str = "PV1MATH"):
+def display_correlations_with_target(df, target = "PV1MATH"):
     """
     Displays all variables according to their Spearman correlation
     with the target variable.
@@ -167,7 +167,7 @@ def display_correlations_with_target(df: pd.DataFrame, target: str = "PV1MATH"):
     print(f"\nNEGATIVE CORRELATIONS WITH {target}")
     print(negative_correlations)
 
-def display_correlations_between_features(df: pd.DataFrame, target: str = "PV1MATH", corr_threshold: float = 0.70):
+def display_correlations_between_features(df, target = "PV1MATH", corr_threshold = 0.70):
     """
     Displays the 20 strongest positive and negative Spearman correlations
     between features, excluding the target variable.
@@ -261,7 +261,7 @@ def display_variance_threshold(ranking_VThresh: pd.DataFrame, threshold = VARIAN
     print(ranking_VThresh.to_string(index=False))
     print()
 
-def display_mutual_info(ranking_MI: pd.DataFrame, task: str, X_train: pd.DataFrame):
+def display_mutual_info(ranking_MI: pd.DataFrame, task, X_train):
 
     print("\n" + "=" * 80)
     print(f"Mutual Information ({task}) : Complete ranking of {X_train.shape[1]} features.")
@@ -271,21 +271,21 @@ def display_mutual_info(ranking_MI: pd.DataFrame, task: str, X_train: pd.DataFra
     print(ranking_MI.to_string(index=False))
     print()
     
-def display_anova(ranking_anova: pd.DataFrame, task: str, X_train: pd.DataFrame):
+def display_anova(ranking_anova: pd.DataFrame, task, X_train):
     print("\n" + "=" * 80)
     print(f"ANOVA ({task}) : Complete ranking of {X_train.shape[1]} features.")
     print("=" * 80)
     print("\n ANOVA Ranking (1 = best F-score) :")
     print(ranking_anova.to_string(index = False))
 
-def display_rfe(ranking_rfe: pd.DataFrame, task: str, X_train: pd.DataFrame):
+def display_rfe(ranking_rfe: pd.DataFrame, task, X_train):
     print("\n" + "=" * 80)
     print(f"RFE ({task}) : Complete ranking of {X_train.shape[1]} features.")
     print("=" * 80)
     print("\n RFE Ranking (1 = best) :")
     print(ranking_rfe.to_string(index=False))
 
-def display_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_names: list = None):
+def display_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_names = None):
 
     print("\n" + "=" * 80)
     print("COMBINED FINAL RANKING")
@@ -294,7 +294,7 @@ def display_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_
     print("\n Final Ranking:")
     print(combined_rankings.to_string(index=False))
 
-def display_top_features(top_features: list, k: int):
+def display_top_features(top_features: list, k):
     print("\n" + "=" * 80)
     print(f"TOP {k} FEATURES SELECTED")
     print("=" * 80)
