@@ -3,7 +3,16 @@ import shutil
 import pandas as pd
 import joblib
 
-from src.config import MISSING_VALUES_THRESHOLD, CLASS_BOUNDARIES, CLASS_LABELS
+from src.config import (
+    MISSING_VALUES_THRESHOLD, 
+    CLASS_BOUNDARIES, 
+    CLASS_LABELS,
+    OUTPUTS_DIR,
+    TABLES_DIR,
+    PLOTS_DIR,
+    MODELS_DIR,
+    DATAFRAMES_DIR,
+)
 from src.dataset_building import reduced_swiss_dataset
 from src.dataset_cleaning_and_preprocessing import (
     create_eda_preprocessor,
@@ -32,6 +41,7 @@ from src.visualisations import (
     export_barplots,
     export_histograms,
     export_violin_plots,
+    plot_confusion_matrices_all_models,
     plot_multiple_metrics_vs_features,
     plot_residuals_from_all_results,
 )
@@ -40,19 +50,13 @@ from src.model_training import evaluate_k_values, run_models
 
 
 if __name__ == "__main__":
-    
+
     # 1. ========== LOAD / BUILD DATASET ==========
     df_raw = reduced_swiss_dataset()
 
     (X_train_imputed, X_test_imputed, X_train, X_test, y_train, y_test, df_raw_with_correct_features, df_preprocessed, numeric_imputed_feature_names, all_imputed_feature_names, removed_missing_columns) = run_preprocessing_pipeline(df_raw, MISSING_VALUES_THRESHOLD)
 
-    output_dir = "outputs"
-    dataframes_dir = os.path.join(output_dir, "dataframes")
-    tables_dir = os.path.join(output_dir, "tables")
-    plots_dir = os.path.join(output_dir, "plots")
-    models_dir = os.path.join(output_dir, "models")
-
-    for dir_path in [output_dir, tables_dir, plots_dir, models_dir, dataframes_dir]:
+    for dir_path in [OUTPUTS_DIR, TABLES_DIR, PLOTS_DIR, MODELS_DIR, DATAFRAMES_DIR]:
         os.makedirs(dir_path, exist_ok=True)
 
     # 2. ========== GLOBAL EXPLORATORY DATA ANALYSIS ==========
@@ -62,9 +66,6 @@ if __name__ == "__main__":
     #print("Columns removed from training-set missingness:", removed_missing_columns or "None")
     #print()
     #generate_missing_values_report(df_raw_with_correct_features, MISSING_VALUES_THRESHOLD, "MISSING VALUES REPORT (BEFORE CLEANING)")
-
-    if os.path.exists("outputs/plots"):
-        shutil.rmtree("outputs/plots")
 
     # Optional visualisations on original/interpretable units.
     #export_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
@@ -89,76 +90,82 @@ if __name__ == "__main__":
     #display_spearman_correlation_matrix(df_train_set_for_eda, "SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION)")
     #display_correlations_with_target(df_train_set_for_eda, "PV1MATH")
     #display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
-
+    
     # 4. ========== FEATURE SELECTION ==========
-    """
+
     #y_train/test for classification task
     y_train_class = pd.cut(y_train, bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
     y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
 
     # regression
-    #(final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
+    #(final_features_ranking_reg, variance_treshold_df_reg, ranking_MI_df_reg, ranking_anova_df_reg, ranking_rfe_df_reg, X_train_after_var_thresh_reg, X_test_after_var_thresh_reg, selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
 
     #classification
-    (final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
-
+    (final_features_ranking_class, variance_treshold_df_class, ranking_MI_df_class, ranking_anova_df_class, ranking_rfe_df_class, X_train_after_var_thresh_class, X_test_after_var_thresh_class, selected_columns_var_thresh_class) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
+    
     # 5. ========= MODEL TRAINING ===========
     
     print("\n" + "=" * 80)
     print("REGRESSION MODELS EVALUATION")
     print("=" * 80)
 
-    
+    """
     # Evaluate regression models for different top-k features
     regression_results_df, regression_all_results_dic = evaluate_k_values(
-        X_train_after_var_thresh, y_train, X_test_after_var_thresh, y_test,
-        final_features_ranking = final_features_ranking,
-        feature_names = selected_columns_var_thresh,
+        X_train_after_var_thresh_reg, y_train, X_test_after_var_thresh_reg, y_test,
+        final_features_ranking = final_features_ranking_reg,
+        feature_names = selected_columns_var_thresh_reg,
         model_names=['LR', 'RF', 'XGBoost', 'SVR'],
         task='regression',
         k_values=[5, 10, 15, 20]
     )
     
+    # Save regression results DataFrame to tables folder
+    regression_results_df.to_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'), index=False)
+    print(f" Regression results saved to '{os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv')}'")
+
+    # Save regression all_results dictionary to models folder
+    joblib.dump(regression_all_results_dic, os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
+    print(f" Regression all_results saved to '{os.path.join(MODELS_DIR, 'regression_all_results.pkl')}'")
+    
+    regression_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'))
+    regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
+
     display_detailed_results_by_k(regression_all_results_dic)
     display_summary(regression_results_df, task='regression')
 
-    # Save regression results DataFrame to tables folder
-    regression_results_df.to_csv(os.path.join(dataframes_dir, 'regression_results_by_k.csv'), index=False)
-    print(f" Regression results saved to '{os.path.join(dataframes_dir, 'regression_results_by_k.csv')}'")
-
-    # Save regression all_results dictionary to models folder
-    joblib.dump(regression_all_results_dic, os.path.join(models_dir, 'regression_all_results.pkl'))
-    print(f" Regression all_results saved to '{os.path.join(models_dir, 'regression_all_results.pkl')}'")
-    """
-    regression_results_df = pd.read_csv(os.path.join(dataframes_dir, 'regression_results_by_k.csv'))
-    regression_all_results_dic = joblib.load(os.path.join(models_dir, 'regression_all_results.pkl'))
-
-    plot_multiple_metrics_vs_features(regression_results_df, task='regression', save_dir='outputs/plots')
+    plot_multiple_metrics_vs_features(regression_results_df, task='regression')
     plot_residuals_from_all_results(regression_all_results_dic, k_chosen=10)
-    """
+    
 
     print("\n" + "=" * 80)
     print("CLASSIFICATION MODELS EVALUATION")
     print("=" * 80)
-
+    """
     # Evaluate classification models for different top-k features
     classification_results_df, classification_all_results_dic = evaluate_k_values(
-            X_train_after_var_thresh, y_train_class, X_test_after_var_thresh, y_test_class,
-            final_features_ranking = final_features_ranking,
-            feature_names = all_imputed_feature_names,
+            X_train_after_var_thresh_class, y_train_class, X_test_after_var_thresh_class, y_test_class,
+            final_features_ranking = final_features_ranking_class,
+            feature_names = selected_columns_var_thresh_class,
             model_names=['LR', 'RF', 'XGBoost', 'SVC'],
             task='classification',
             k_values=[5, 10, 15, 20]
         )
 
+    # Save classification results DataFrame to tables folder
+    classification_results_df.to_csv(os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv'), index=False)
+    print(f"Classification results saved to '{os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv')}'")
+
+    # Save classification all_results dictionary to models folder
+    joblib.dump(classification_all_results_dic, os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
+    print(f"Classification all_results saved to '{os.path.join(MODELS_DIR, 'classification_all_results.pkl')}'")
+    
+    classification_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv'))
+    classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
+
     display_detailed_results_by_k(classification_all_results_dic)
     display_summary(classification_results_df, task='classification')
 
-    # Save classification results DataFrame to tables folder
-    classification_results_df.to_csv(os.path.join(dataframes_dir, 'classification_results_by_k.csv'), index=False)
-    print(f"Classification results saved to '{os.path.join(dataframes_dir, 'classification_results_by_k.csv')}'")
-
-    # Save regression all_results dictionary to models folder
-    joblib.dump(classification_all_results_dic, os.path.join(models_dir, 'classification_all_results.pkl'))
-    print(f"Classification all_results saved to '{os.path.join(models_dir, 'classification_all_results.pkl')}'")
-    """
+    plot_multiple_metrics_vs_features(classification_results_df, task='classification')
+    plot_confusion_matrices_all_models(classification_all_results_dic, k_chosen=10, class_labels=CLASS_LABELS)
+    

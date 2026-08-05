@@ -306,59 +306,52 @@ def display_top_features(top_features: list, k):
 # ==== MODEL TRAINING ====
 
 #utils
-def check_overfitting_regression(train_r2, test_r2, test_r2_adj=None):
+def check_overfitting_regression(train_r2, cv_score):
 
-    # Overfitting check based on heuristics (INSPIRATION: https://datascience.stackexchange.com/questions/77298/how-many-ways-are-there-to-check-model-overfitting)
+    # Overfitting check based on check based on the gap between Train R² and Cross-Validation R². 
+    # Inspiration for the heuristic: https://datascience.stackexchange.com/questions/77298/how-many-ways-are-there-to-check-model-overfitting)
     
-    gap = train_r2 - test_r2
+    gap = train_r2 - cv_score
     
-    if test_r2_adj is not None:
-        adj_gap = train_r2 - test_r2_adj
-    else:
-        adj_gap = gap
-
     # # A 10% R² gap is a clear overfitting signal, 5% can be considered as a warning zone whiles negative gaps below -5% are rare enough to be noted as positive.
     if gap > 0.10:
         status = "Overfitting"
-        detail = f"R² gap = {gap:.4f} (> 0.10)"
+        detail = f"Gap (Train - CV) = {gap:.4f} (> 0.10)"
     elif gap > 0.05:
         status = "Mild overfitting"
-        detail = f"R² gap = {gap:.4f}"
+        detail = f"Gap (Train - CV) = {gap:.4f}"
     elif gap < -0.05:
         status = "Good generalisation (Test R² > Train R²)"
-        detail = f"R² gap = {gap:.4f}"
+        detail = f"Gap (Train - CV) = {gap:.4f}"
     else:
         status = "Good generalisation"
-        detail = f"R² gap = {gap:.4f}"
+        detail = f"Gap (Train - CV) = {gap:.4f}"
     
-    return status, detail, gap, adj_gap
+    return status, detail, gap
 
 #utils
-def check_overfitting_classification(train_acc, test_acc, train_f1, test_f1):
+def check_overfitting_classification(train_f1, cv_f1):
 
-    # Overfitting check based on empirical classification heuristics.
+    # Overfitting check based on the gap between Train F1 and Cross-Validation F1.
     # In that situation, the threshold is stricter (0.05) than regression (0.10) because classification 
     # metrics are strictly bounded between 0 and 1. This means that in such situation, a 5% drop 
     # represents a critical loss of operational predictive power.
-    acc_gap = train_acc - test_acc
-    f1_gap = train_f1 - test_f1
-    
-    gap = max(acc_gap, f1_gap)
+    gap = train_f1 - cv_f1
     
     if gap > 0.05:
         status = "Overfitting"
-        detail = f"Acc gap = {acc_gap:.4f}, F1 gap = {f1_gap:.4f}"
+        detail = f"F1 Macro Gap (Train - CV) = {gap:.4f}"
     elif gap > 0.02:
         status = "Mild overfitting"
-        detail = f"Acc gap = {acc_gap:.4f}, F1 gap = {f1_gap:.4f}"
+        detail = f"F1 Macro Gap (Train - CV) = {gap:.4f}"
     elif gap < -0.03: # A negative gap exceeding 3% is relatively rare in practice and suggests that the model generalises surprisingly well.
-        status = "Good generalisation (Test > Train)"
-        detail = f"Gap = {gap:.4f}"
+        status = "Good generalisation (CV > Train)"
+        detail = f"F1 Macro Gap (Train - CV) = {gap:.4f}"
     else:
         status = "Good generalisation"
-        detail = f"Gap = {gap:.4f}"
+        detail = f"F1 Macro Gap (Train - CV) = {gap:.4f}"
     
-    return status, detail, acc_gap, f1_gap
+    return status, detail, gap
 
 def display_results(results, model_names=None):
     """
@@ -375,11 +368,11 @@ def display_results(results, model_names=None):
         result = results[name]
         
         if result['type'] == 'regression':
-            _display_regression_result(name, result)
+            display_regression_result(name, result)
         else:
-            _display_classification_result(name, result)
+            display_classification_result(name, result)
 
-def _display_regression_result(name, result):
+def display_regression_result(name, result):
     """Internal function to display a single regression result."""
     print("=" * 50)
     print(f"{name} (REGRESSION) - RESULTS")
@@ -391,19 +384,20 @@ def _display_regression_result(name, result):
     print(f"{'RMSE':<12} {result['train_rmse']:>10.4f} {result['test_rmse']:>10.4f} {result['train_rmse'] - result['test_rmse']:>10.4f}")
     print(f"{'MAE':<12} {result['train_mae']:>10.4f} {result['test_mae']:>10.4f} {result['train_mae'] - result['test_mae']:>10.4f}")
     print("-" * 50)
-    print(f"R²_adj (test)     : {result['test_r2_adj']:.4f}")
     
     if result.get('is_lasso'):
         print(f"Best alpha        : {result['best_alpha']}")
         print(f"Features selected : {result['n_selected']}/{result['p']}")
-    
+
+    if 'best_cv_score' in result:
+        print(f"Best CV R²-score  : {result['best_cv_score']:.4f}")
+
     # Overfitting status
-    status, detail, _, _ = check_overfitting_regression(
-        result['train_r2'], result['test_r2'], result['test_r2_adj']
-    )
+    cv_score = result.get('best_cv_score', result['test_r2'])
+    status, detail, _ = check_overfitting_regression(result['train_r2'], cv_score)
     print(f"\n{status}: {detail}")
 
-def _display_classification_result(name, result):
+def display_classification_result(name, result):
     """Internal function to display a single classification result."""
     print("=" * 50)
     print(f"{name} (CLASSIFICATION) - RESULTS")
@@ -411,11 +405,11 @@ def _display_classification_result(name, result):
     print(f"{'Metric':<15} {'Train':>10} {'Test':>10} {'Gap':>10}")
     print("-" * 50)
     print(f"{'Accuracy':<15} {result['train_accuracy']:>10.4f} {result['test_accuracy']:>10.4f} {result['gap_accuracy']:>10.4f}")
-    print(f"{'F1 (weighted)':<15} {result['train_f1_weighted']:>10.4f} {result['test_f1_weighted']:>10.4f} {result['gap_f1']:>10.4f}")
+    print(f"{'F1 (macro)':<15} {result['train_f1_macro']:>10.4f} {result['test_f1_macro']:>10.4f} {result['gap_f1']:>10.4f}")
     print("-" * 50)
     
     # Classification report with original labels
-    print("\nClassification Report (Test):")
+    print(f"\nClassification Report {name} (Test):")
     print(classification_report(result['y_test_true'], result['y_pred']))
     print("\nConfusion Matrix (Test):")
     print(confusion_matrix(result['y_test_true'], result['y_pred']))
@@ -424,10 +418,7 @@ def _display_classification_result(name, result):
     print(f"Best CV F1-score: {result['best_cv_score']:.4f}")
     
     # Overfitting status
-    status, detail, _, _ = check_overfitting_classification(
-        result['train_accuracy'], result['test_accuracy'],
-        result['train_f1_weighted'], result['test_f1_weighted']
-    )
+    status, detail, _ = check_overfitting_classification(result['train_f1_macro'], result['best_cv_score'])
     print(f"\n{status}: {detail}")
     print()
 
@@ -458,9 +449,9 @@ def display_summary(results_df, task):
     print("=" * 80)
     
     if task == 'regression':
-        display_cols = ['k', 'Model', 'R²_test', 'RMSE_test', 'MAE_test', 'Gap_R²']
+        display_cols = ['k', 'Model', 'CV_Score', 'R²_test', 'RMSE_test', 'MAE_test', 'Gap_R²']
         if 'Features_Selected' in results_df.columns:
             display_cols.append('Features_Selected')
         print(results_df[display_cols].to_string(index=False))
     else:
-        print(results_df[['k', 'Model', 'Accuracy_test', 'F1_weighted_test', 'Gap_Accuracy']].to_string(index=False))
+        print(results_df[['k', 'Model', 'CV_Score', 'Accuracy_test', 'F1_macro_test', 'Gap_Accuracy']].to_string(index=False))

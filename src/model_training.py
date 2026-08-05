@@ -33,13 +33,19 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             
             if name == "LR":
                 alphas = [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
-                grid = GridSearchCV(
-                    Lasso(random_state=7, max_iter=5000),
-                    {'alpha': alphas},
+                
+                pipeline = Pipeline([
+                    ("scaler", StandardScaler()), 
+                    ("model", Lasso(random_state=7, max_iter=5000))
+                ])
+                
+                model = GridSearchCV(
+                    pipeline,
+                    {'model__alpha': alphas}, 
                     cv=5,
                     scoring='r2'
                 )
-                model = Pipeline([("scaler", StandardScaler()), ("model", grid)])
+
                 is_lasso = True
                 
             elif name == "RF":
@@ -47,11 +53,11 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 # The hyperparameters were selected after iterative trial-and-error experimentation.
                 parameters = {
                     'model__n_estimators': [100],
-                    'model__max_depth': [8],
+                    'model__max_depth': [5, 6],
                     'model__min_samples_split': [10, 20],
-                    'model__min_samples_leaf': [12],
+                    'model__min_samples_leaf': [20, 30],
                     'model__max_features': ['sqrt'],
-                    'model__ccp_alpha': [0.02, 0.05] #required to reduce strong overfitting observed
+                    'model__ccp_alpha': [0.01, 0.02, 0.04] #required to reduce strong overfitting observed
                 }
 
                 # No scaler needed for RF
@@ -116,30 +122,12 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             
             # For Lasso only
             if is_lasso:
-                # Get coefficients from the pipeline
-                coefs = model.named_steps['model'].best_estimator_.coef_
-                n_selected = sum(abs(coefs) > 1e-6) #  Excludes features shrunk to zero (coefficients < 1e-6 carry zero predictive power). REFERENCE: https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html 
-                best_alpha = model.named_steps['model'].best_params_['alpha']
+                coefs = model.best_estimator_.named_steps['model'].coef_
+                n_selected = sum(abs(coefs) > 1e-6)
+                best_alpha = model.best_params_['model__alpha']
+                
                 print(f"Best alpha        : {best_alpha}")
                 print(f"Features selected : {n_selected}/{p}")
-
-            """""
-            # Display results
-            print("=" * 50)
-            print(f"{name} (REGRESSION) - RESULTS")
-            print("=" * 50)
-            print(f"{'Metric':<12} {'Train':>10} {'Test':>10} {'Gap':>10}")
-            print("-" * 50)
-            print(f"{'R²':<12} {train_r2:>10.4f} {test_r2:>10.4f} {train_r2 - test_r2:>10.4f}")
-            print(f"{'MSE':<12} {train_mse:>10.2f} {test_mse:>10.2f} {train_mse - test_mse:>10.2f}")
-            print(f"{'RMSE':<12} {train_rmse:>10.4f} {test_rmse:>10.4f} {train_rmse - test_rmse:>10.4f}")
-            print(f"{'MAE':<12} {train_mae:>10.4f} {test_mae:>10.4f} {train_mae - test_mae:>10.4f}")
-            print("-" * 50)
-            print(f"R²_adj (test)     : {test_r2_adj:.4f}")
-            
-            status, detail, _, _ = check_overfitting_regression(train_r2, test_r2, test_r2_adj)
-            print(f"\n{status}: {detail}")
-            """
             
             # Store all metrics in results dictionary for later aggregation
             results[name] = {
@@ -161,6 +149,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 # Gap
                 'gap_r2': train_r2 - test_r2,
                 'gap': train_r2 - test_r2,
+                'best_cv_score': model.best_score_,
                 # Lasso-specific
                 'n_selected': n_selected if is_lasso else None,
                 'best_alpha': best_alpha if is_lasso else None
@@ -190,17 +179,26 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                         random_state=7,
                     ))
                 ])
-                parameters = {
-                    'classifier__C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
-                    'classifier__class_weight': ['balanced'],
-                    'classifier__penalty': ['l1', 'l2'],
-                    'classifier__solver': ['liblinear', 'saga', 'lbfgs']
-                }
+                #Bug fixed with a list of dic for parameters (as lbfgs doesn't support l1)
+                parameters = [
+                    {
+                        'classifier__C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
+                        'classifier__class_weight': ['balanced'],
+                        'classifier__penalty': ['l2'],
+                        'classifier__solver': ['lbfgs', 'liblinear', 'saga']
+                    },
+                    {
+                        'classifier__C': [0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
+                        'classifier__class_weight': ['balanced'],
+                        'classifier__penalty': ['l1'],
+                        'classifier__solver': ['liblinear', 'saga']
+                    }
+                ]
                 model = GridSearchCV(
                     pipeline,
                     parameters,
                     cv=5,
-                    scoring='f1_weighted',
+                    scoring='f1_macro',
                     n_jobs=-1,
                     verbose=1
                 )
@@ -209,13 +207,13 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 # REFERENCE: https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html 
                 # The hyperparameters were selected after iterative trial-and-error experimentation.
                 parameters = {
-                    'model__n_estimators': [100],
-                    'model__max_depth': [6, 8],              
-                    'model__min_samples_split': [20, 50, 100],   
-                    'model__min_samples_leaf': [20, 50],     
+                    'model__n_estimators': [200],
+                    'model__max_depth': [6, 8],                 
+                    'model__min_samples_split': [30, 50],        
+                    'model__min_samples_leaf': [15, 25],        
                     'model__max_features': ['sqrt'],
                     'model__class_weight': ['balanced'],
-                    'model__ccp_alpha': [0.005, 0.01, 0.02]
+                    'model__ccp_alpha': [0.001, 0.002]
                 }
 
                 pipeline = Pipeline([("model", RandomForestClassifier(random_state=7, n_jobs=-1))])
@@ -225,7 +223,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     parameters,
                     n_iter=12,
                     cv=3,
-                    scoring='f1_weighted',  # Important for imbalanced classes
+                    scoring='f1_macro',  # Important for imbalanced classes
                     n_jobs=-1,
                     verbose=1,
                     random_state=7
@@ -241,15 +239,15 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 # The hyperparameters were selected after iterative trial-and-error experimentation.
                 # REFERENCE: https://www.datacamp.com/tutorial/ensemble-learning-python-guide?dc_referrer=https%3A%2F%2Fwww.google.com%2F 
                 parameters = {
-                    'model__n_estimators': [100, 200],                  
-                    'model__max_depth': [3, 4],                    
-                    'model__learning_rate': [0.01, 0.03, 0.05],          
-                    'model__subsample': [0.6, 0.8],                     
-                    'model__colsample_bytree': [0.6, 0.8],              
-                    'model__gamma': [5, 10, 20],                        
-                    'model__reg_alpha': [5.0, 10.0],                
-                    'model__reg_lambda': [5.0, 10.0],               
-                    'model__min_child_weight': [5, 10]              
+                    'model__n_estimators': [100],                  
+                    'model__max_depth': [3, 4],                  
+                    'model__learning_rate': [0.03],          
+                    'model__subsample': [0.8],                     
+                    'model__colsample_bytree': [0.8],              
+                    'model__gamma': [2, 5],                        
+                    'model__reg_alpha': [5.0],                
+                    'model__reg_lambda': [5.0, 10.0],            
+                    'model__min_child_weight': [5, 10]             
                 }
 
                 pipeline = Pipeline([
@@ -261,7 +259,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     parameters,
                     n_iter=15,
                     cv=3,
-                    scoring='f1_weighted',
+                    scoring='f1_macro',
                     n_jobs=-1,
                     verbose=1,
                     random_state=7
@@ -271,12 +269,12 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 # REFERENCE: https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC 
                 # Those final hyperparameters were selected after iterative trial-and-error experimentation.
                 parameters = {
-                        'model__kernel': ['rbf', 'poly'],          
-                        'model__C': [0.1, 1, 10],                  
-                        'model__gamma': ['scale', 'auto', 0.1],
-                        'model__degree': [2],                   
-                        'model__class_weight': ['balanced']
-                    }
+                    'model__kernel': ['rbf', 'poly'],          
+                    'model__C': [0.1, 0.5, 1],                  
+                    'model__gamma': ['scale', 'auto'],
+                    'model__degree': [2],                   
+                    'model__class_weight': ['balanced']
+                }
 
                 pipeline = Pipeline([
                     ("scaler", StandardScaler()),  # SVC is sensitive to feature scaling
@@ -288,7 +286,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     parameters,
                     n_iter = 8,
                     cv=3,
-                    scoring='f1_weighted',
+                    scoring='f1_macro',
                     n_jobs=-1,
                     verbose=1,
                     random_state=7
@@ -326,32 +324,12 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             # Precision and Recall (macro)
             test_precision_weighted = precision_score(y_test_use, y_test_pred, average='weighted')
             test_precision_macro = precision_score(y_test_use, y_test_pred, average='macro')
+            train_precision_macro = precision_score(y_train_use, y_train_pred, average='macro')
+            
             test_recall_weighted = recall_score(y_test_use, y_test_pred, average='weighted')
             test_recall_macro = recall_score(y_test_use, y_test_pred, average='macro')
-
-            """"
-            print("=" * 50)
-            print(f"{name} (CLASSIFICATION) - RESULTS")
-            print("=" * 50)
-            print(f"{'Metric':<15} {'Train':>10} {'Test':>10} {'Gap':>10}")
-            print("-" * 50)
-            print(f"{'Accuracy':<15} {train_accuracy:>10.4f} {test_accuracy:>10.4f} {train_accuracy - test_accuracy:>10.4f}")
-            print(f"{'F1 (weighted)':<15} {train_f1_weighted:>10.4f} {test_f1_weighted:>10.4f} {train_f1_weighted - test_f1_weighted:>10.4f}")
-            print("-" * 50)
+            train_recall_macro = recall_score(y_train_use, y_train_pred, average='macro')
             
-            # Classification report with original labels
-            print("\nClassification Report (Test):")
-            print(classification_report(y_test_true_display, y_test_pred_display))
-            print("\nConfusion Matrix (Test):")
-            print(confusion_matrix(y_test_true_display, y_test_pred_display))
-            print()
-            print(f"Best parameters: {model.best_params_}")
-            print(f"Best CV F1-score: {model.best_score_:.4f}")
-            
-            status, detail, _, _ = check_overfitting_classification(train_accuracy, test_accuracy, train_f1_weighted, test_f1_weighted)
-            print(f"\n{status}: {detail}")
-            """
-
             results[name] = {
                 'model': model,
                 'y_pred': y_test_pred_display,
@@ -360,6 +338,8 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 'train_accuracy': train_accuracy,
                 'train_f1_weighted': train_f1_weighted,
                 'train_f1_macro': train_f1_macro,
+                'train_precision_macro': train_precision_macro,
+                'train_recall_macro': train_recall_macro,
                 'test_accuracy': test_accuracy,
                 'test_f1_weighted': test_f1_weighted,
                 'test_f1_macro': test_f1_macro,
@@ -368,7 +348,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 'test_recall_weighted': test_recall_weighted,
                 'test_recall_macro': test_recall_macro,
                 'gap_accuracy': train_accuracy - test_accuracy,
-                'gap_f1': train_f1_weighted - test_f1_weighted,
+                'gap_f1': train_f1_macro - test_f1_macro,
                 'gap': max(train_accuracy - test_accuracy, train_f1_weighted - test_f1_weighted),
                 'best_params': model.best_params_,      
                 'best_cv_score': model.best_score_
@@ -415,6 +395,7 @@ def evaluate_k_values(X_train, y_train, X_test, y_test, final_features_ranking, 
         # Extract metrics for each model
         for name, result in results_k.items():
             row = {'k': k, 'Model': name}
+            row['CV_Score'] = result.get('best_cv_score')
             
             if task == 'regression':
                 row['R²_train'] = result.get('train_r2')
@@ -439,6 +420,8 @@ def evaluate_k_values(X_train, y_train, X_test, y_test, final_features_ranking, 
                 row['F1_weighted_test'] = result.get('test_f1_weighted')
                 row['F1_macro_train'] = result.get('train_f1_macro')
                 row['F1_macro_test'] = result.get('test_f1_macro')
+                row['Precision_macro_train'] = result.get('train_precision_macro')
+                row['Recall_macro_train'] = result.get('train_recall_macro')
                 row['Precision_weighted_test'] = result.get('test_precision_weighted')
                 row['Precision_macro_test'] = result.get('test_precision_macro')
                 row['Recall_weighted_test'] = result.get('test_recall_weighted')
