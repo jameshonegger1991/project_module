@@ -25,7 +25,7 @@ def test_apply_zero_variance_threshold():
     
     # Calling the function with `threshold=0`.
     # Based on `sklearn.feature_selection.VarianceThreshold` behavior,
-    # features with variance *equal to* 0 should be removed.
+    # features with variance equal to 0 should be removed.
     # Reference: https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.VarianceThreshold.html
   
     report_df, selected_cols, threshold_returned = apply_variance_threshold(X, feature_names, threshold=0)
@@ -110,7 +110,6 @@ def test_apply_mutual_info():
     )
     feature_names = ['A', 'B', 'C']
     
-    # Apply mutual information for classification.
     ranking_df_clf = apply_mutual_info(X_clf, y_clf, feature_names, task='classification')
     
     top_2_clf = ranking_df_clf.head(2)['Feature'].tolist()
@@ -144,7 +143,6 @@ def test_apply_anova():
     assert len(ranking_df_reg) == len(feature_names)
     
     # Part 2: Classification task 
-
     # Generating a dataset where Feature A has different means across classes.
     # For classification, ANOVA detects if the mean of a feature differs between classes.
     X_clf = np.random.rand(100, 3)
