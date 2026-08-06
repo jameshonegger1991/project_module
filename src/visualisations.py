@@ -4,10 +4,14 @@ import matplotlib.pyplot as plt
 import os
 import textwrap
 import numpy as np
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import learning_curve
+from sklearn.preprocessing import LabelEncoder
 from src.config import (
     PLOTS_DIR,
 )
+
+# EDA plots
 
 def export_histograms(df, title = "Histogram"):
     """
@@ -167,16 +171,15 @@ def display_violin_plots(df, title = "Violin Plots - All Numeric Features"):
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(22, n_rows * 4.5)) # Adjusted figsize for better layout
     
     # Flatten the axes array to easily iterate over all subplots, regardless of grid dimensions.
-    # Source: https://numpy.org/doc/stable/reference/generated/numpy.ndarray.flatten.html
+    # Source: - https://numpy.org/doc/stable/reference/generated/numpy.ndarray.flatten.html
+    #         - https://stackoverflow.com/questions/62035244/creating-multiple-plot-using-for-loop-from-dataframe 
     axes = axes.flatten()
     
     for i in range(n_rows):
         for j in range(n_cols):
-            index = i * n_cols + j # Calculate the current index in the flattened axes array
+            index = i * n_cols + j 
             if index < len(numeric_cols):
                 col = numeric_cols[index]
-                # Create a horizontal violin plot for the current column.
-                # Source: https://seaborn.pydata.org/generated/seaborn.violinplot.html
                 sns.violinplot(data=df[col], orient='h', ax=axes[index]) 
                 axes[index].set_title(col, fontsize=8) 
                 axes[index].set_xlabel('') 
@@ -186,8 +189,8 @@ def display_violin_plots(df, title = "Violin Plots - All Numeric Features"):
                 axes[index].axis('off')
     
     plt.suptitle(title, fontsize=16) 
-    plt.tight_layout(rect=[0, 0, 1, 0.96], pad=2.5) # Adjust layout to prevent titles/labels from overlapping. The rect parameter leaves space for suptitle.
-    plt.subplots_adjust(hspace=1.0, wspace=0.4) # Adjust the height and width spacing between subplots.
+    plt.tight_layout(rect=[0, 0, 1, 0.96], pad=2.5) 
+    plt.subplots_adjust(hspace=1.0, wspace=0.4)
     plt.show()
 
 def display_barplots(df, title = "Bar Plots - All Categorical Features"):
@@ -270,6 +273,7 @@ def display_spearman_correlation_matrix(df, title = 'Spearman Correlation Matrix
     plt.subplots_adjust(left=0.16, bottom=0.18, top=0.92)
     plt.show()
 
+# Model evaluation plots
 def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(14, 10)):
     """
     Plots multiple metrics into one figure with different subplots that show all models vs. number of features.
@@ -298,7 +302,8 @@ def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(1
     n_metrics = len(available_metrics)
     n_cols = 2
     n_rows = (n_metrics + n_cols - 1) // n_cols
-    
+
+    # INSPIRATION: https://stackoverflow.com/questions/66705955/creating-subplots-through-a-loop-from-dataframe 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
     
     if n_metrics == 1:
@@ -308,7 +313,8 @@ def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(1
     
     for i, metric in enumerate(available_metrics):
         ax = axes[i]
-        
+
+        #INSPIRATION: https://stackoverflow.com/questions/26355313/plotting-multiple-plots-generated-inside-a-for-loop-on-the-same-axess 
         for j, model in enumerate(models):
             data = results_df[results_df['Model'] == model]
             data = data.sort_values('k')
@@ -317,7 +323,7 @@ def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(1
         ylabel = metric.replace('_', ' ').title()
 
         if metric == 'CV_Score':
-            ylabel = 'CV R²-score (Validation)' if task == 'regression' else 'CV F1-Score (Validation)'
+            ylabel = 'CV R²-score (Validation)' if task == 'regression' else 'CV F1 (macro) - Score (Validation)'
         if metric.startswith('R²'):
             ylabel = 'R²'
         elif metric.startswith('RMSE'):
@@ -341,16 +347,13 @@ def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(1
         ax.set_title(f'{ylabel} {title_suffix}', fontsize=12)
         ax.grid(True, alpha=0.3)
         ax.set_xticks(results_df['k'].unique())
-        
-        if i == 0:
-            ax.legend() #no need to display the same legend on the 4 subplots, the first one is enough.
+        ax.legend() 
     
-    # Hide unused subplots
     for i in range(n_metrics, len(axes)):
         axes[i].axis('off')
     
-    fig.suptitle(f'{task.capitalize()} Performance vs. Number of Features', fontsize=16)
-    plt.subplots_adjust(top=0.90, hspace=0.35) 
+    fig.suptitle(f'{task.capitalize()} Performance vs. Number of Features', fontsize=16, y=0.96)
+    plt.subplots_adjust(top=0.88, bottom=0.08, hspace=0.45, wspace=0.30)
     
 
     save_path = os.path.join(PLOTS_DIR, f"{task}_metrics_vs_features_plot.png")
@@ -362,6 +365,7 @@ def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(1
 def plot_residuals_from_all_results(all_results_regression, k_chosen, figsize=(14, 10)):
     """
     Plots residual plots for all regression models at the chosen 'k' by using the 'all_results' dictionary generated by evaluate_k_values.
+    (Custom wrapper designed for pipeline consistency over sklearn's PredictionErrorDisplay).
     """
     data_k = all_results_regression[k_chosen]['results']
     models = list(data_k.keys())
@@ -381,9 +385,9 @@ def plot_residuals_from_all_results(all_results_regression, k_chosen, figsize=(1
         y_true = result['y_test_true'] 
         residuals = y_true - y_pred
         
-        # alpha=0.6 provides transparency, useful for visualizing density in overlapping points.
+
         ax.scatter(y_pred, residuals, alpha=0.6)
-        # The horizontal line at y=0 serves as a reference, indicating where residuals should ideally fall.
+        # y=0 serves as a reference
         ax.axhline(y=0, color='red', linestyle='--')
 
         ax.set_xlabel("Predicted Values")
@@ -391,20 +395,26 @@ def plot_residuals_from_all_results(all_results_regression, k_chosen, figsize=(1
         ax.set_title(f"Residuals - {model_name} (k={k_chosen})")
         ax.grid(True, alpha=0.3)
     
-    # Hide empty subplots
     for j in range(n_models, len(axes)):
         axes[j].axis('off')
         
     fig.suptitle(f"Residual Analysis for top {k_chosen} features", fontsize=16)
     plt.tight_layout(h_pad=2.5) 
-    plt.show()
 
     save_path = os.path.join(PLOTS_DIR, f"residual_plots_for_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
     print(f"residual plots for {k_chosen} features saved to: {save_path}")
+    plt.show()
     
 def plot_confusion_matrices_all_models(all_results_classification, k_chosen, class_labels, figsize=(14, 10)):
+    """
+    plot confusion matrices for all classification models built with k-top features.
+    (Custom wrapper designed for ensuring pipeline consistency and custom metadata injection over sklearn's ConfusionMatrixDisplay).
 
+    INSPIRATIONS: - https://stackoverflow.com/questions/28356359/one-colorbar-for-seaborn-heatmaps-in-subplot 
+                  - https://stackoverflow.com/questions/13784201/how-to-have-one-colorbar-for-all-subplots 
+                  - https://stackoverflow.com/questions/61825227/plotting-multiple-confusion-matrix-side-by-side 
+    """
     data_k = all_results_classification[k_chosen]['results']
     models = list(data_k.keys())
     
@@ -415,7 +425,7 @@ def plot_confusion_matrices_all_models(all_results_classification, k_chosen, cla
     fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
     axes = axes.flatten()
     
-    wrapped_labels = ['\n'.join(textwrap.wrap(label, width=12)) for label in class_labels]
+    wrapped_labels = ['\n'.join(textwrap.wrap(label, width=12)) for label in class_labels] # required, otherwise overlapping on x/y axes
     
     heatmap = None
 
@@ -440,16 +450,17 @@ def plot_confusion_matrices_all_models(all_results_classification, k_chosen, cla
         ax.text(1.0, -0.25, f"Total: {total_samples}", transform=ax.transAxes, 
                 ha='right', va='top', fontsize=9, color='#333333')
     
-    # Hide empty subplots
     for j in range(n_models, len(axes)):
         axes[j].axis('off')
         
     fig.suptitle(f"Confusion Matrices for top {k_chosen} features", fontsize=16)
-    
+
+    # A unified global colorbar is preferred to avoid redundant legends across subplots
     cbar_ax = fig.add_axes([0.91, 0.15, 0.02, 0.70]) 
     fig.colorbar(heatmap.collections[0], cax=cbar_ax)
     cbar_ax.set_ylabel('Count', rotation=270, labelpad=10, fontsize=10)
-    
+
+    # Withouth this fine-tune layout margins, titles and labels clip
     plt.subplots_adjust(top=0.90, bottom=0.18, left=0.08, right=0.88, hspace=0.45, wspace=0.3)
 
     os.makedirs(PLOTS_DIR, exist_ok=True)
@@ -457,5 +468,78 @@ def plot_confusion_matrices_all_models(all_results_classification, k_chosen, cla
     save_path = os.path.join(PLOTS_DIR, f"confusion_matrices_top_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"Confusion matrices saved to: {save_path}")
+
+    plt.show()
+
+def plot_learning_curves_all_models(all_results, k_chosen, X_train_after_var_thresh, y_train, task='classification', figsize=(14, 10)):
+    """
+    plot learning curves for all models built with k-top features.
+    REFERENCE: https://scikit-learn.org/stable/auto_examples/model_selection/plot_learning_curve.html 
+    INSPIRATION: https://stackoverflow.com/questions/41097322/learning-curve-high-bias-high-variance-why-the-testing-learning-curve-gets-f
+    """
+    data_k = all_results[k_chosen]['results']
+    models = list(data_k.keys())
+    
+    n_models = len(models)
+    n_cols = 2
+    n_rows = (n_models + 1) // 2
+    
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
+    axes = axes.flatten()
+    
+    indices = all_results[k_chosen]['indices']
+    X_train_k = X_train_after_var_thresh[:, indices]
+    scoring = 'f1_macro' if task == 'classification' else 'r2'
+    metric_label = "F1 (macro)" if task == 'classification' else "R² Score"
+    
+    for i, model_name in enumerate(models):
+        ax = axes[i]
+        result = data_k[model_name]
+        model_entry = result['model']
+        estimator = model_entry.best_estimator_ if hasattr(model_entry, 'best_estimator_') else model_entry
+
+        y_train_use = y_train
+        if model_name == "XGBoost" and task == 'classification':
+            encoder = LabelEncoder()
+            y_train_use = encoder.fit_transform(y_train)
+
+        train_sizes, train_scores, test_scores = learning_curve(
+            estimator=estimator,
+            X = X_train_k,
+            y = y_train_use,
+            train_sizes = np.linspace(0.1, 1.0, 5), #  to evaluate behavior with 10%, 32.5%, 55%, 77.5% and 100% of training data.
+            cv = 3, 
+            scoring=scoring,
+            n_jobs=-1,
+            random_state=7
+        )
+        
+        train_scores_mean = np.mean(train_scores, axis=1)
+        train_scores_std = np.std(train_scores, axis=1)
+        test_scores_mean = np.mean(test_scores, axis=1)
+        test_scores_std = np.std(test_scores, axis=1)
+        
+        ax.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+        ax.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Cross-validation score")
+        
+        ax.fill_between(train_sizes, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1, color="r")
+        ax.fill_between(train_sizes, test_scores_mean - test_scores_std, test_scores_mean + test_scores_std, alpha=0.1, color="g")
+        
+        ax.set_title(f"Learning Curve - {model_name} (k={k_chosen})", fontsize=12)
+        ax.set_xlabel("Training examples size", fontsize=10)
+        ax.set_ylabel(metric_label, fontsize=10)
+        ax.grid(True, alpha=0.3)
+        ax.legend(loc="best", fontsize=9)
+    
+    for j in range(n_models, len(axes)):
+        axes[j].axis('off')
+        
+    fig.suptitle(f"Learning Curves for all models (top {k_chosen} features)", fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+    save_path = os.path.join(PLOTS_DIR, f"{task}_learning_curves_top_{k_chosen}_features.png")
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"Learning curves saved to: {save_path}")
 
     plt.show()

@@ -42,6 +42,7 @@ from src.visualisations import (
     export_histograms,
     export_violin_plots,
     plot_confusion_matrices_all_models,
+    plot_learning_curves_all_models,
     plot_multiple_metrics_vs_features,
     plot_residuals_from_all_results,
 )
@@ -75,7 +76,6 @@ if __name__ == "__main__":
     #display_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
     #display_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
 
-
     # 3. ========== TRAIN-SET EDA AFTER IMPUTATION ==========
     eda_preprocessor = create_eda_preprocessor(X_train)
     X_train_imputed_for_eda = eda_preprocessor.fit_transform(X_train)
@@ -98,8 +98,8 @@ if __name__ == "__main__":
     y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
 
     # regression
-    #(final_features_ranking_reg, variance_treshold_df_reg, ranking_MI_df_reg, ranking_anova_df_reg, ranking_rfe_df_reg, X_train_after_var_thresh_reg, X_test_after_var_thresh_reg, selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
-
+    (final_features_ranking_reg, variance_treshold_df_reg, ranking_MI_df_reg, ranking_anova_df_reg, ranking_rfe_df_reg, X_train_after_var_thresh_reg, X_test_after_var_thresh_reg, selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
+    
     #classification
     (final_features_ranking_class, variance_treshold_df_class, ranking_MI_df_class, ranking_anova_df_class, ranking_rfe_df_class, X_train_after_var_thresh_class, X_test_after_var_thresh_class, selected_columns_var_thresh_class) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
     
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     print("REGRESSION MODELS EVALUATION")
     print("=" * 80)
 
-    """
+    
     # Evaluate regression models for different top-k features
     regression_results_df, regression_all_results_dic = evaluate_k_values(
         X_train_after_var_thresh_reg, y_train, X_test_after_var_thresh_reg, y_test,
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     # Save regression all_results dictionary to models folder
     joblib.dump(regression_all_results_dic, os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
     print(f" Regression all_results saved to '{os.path.join(MODELS_DIR, 'regression_all_results.pkl')}'")
-    
+
     regression_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'))
     regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
 
@@ -136,12 +136,18 @@ if __name__ == "__main__":
 
     plot_multiple_metrics_vs_features(regression_results_df, task='regression')
     plot_residuals_from_all_results(regression_all_results_dic, k_chosen=10)
+    plot_learning_curves_all_models(
+            regression_all_results_dic, 
+            k_chosen=10, 
+            X_train_after_var_thresh=X_train_after_var_thresh_reg, 
+            y_train=y_train, 
+            task='regression'
+        )
     
-
     print("\n" + "=" * 80)
     print("CLASSIFICATION MODELS EVALUATION")
     print("=" * 80)
-    """
+    
     # Evaluate classification models for different top-k features
     classification_results_df, classification_all_results_dic = evaluate_k_values(
             X_train_after_var_thresh_class, y_train_class, X_test_after_var_thresh_class, y_test_class,
@@ -168,4 +174,12 @@ if __name__ == "__main__":
 
     plot_multiple_metrics_vs_features(classification_results_df, task='classification')
     plot_confusion_matrices_all_models(classification_all_results_dic, k_chosen=10, class_labels=CLASS_LABELS)
+
+    plot_learning_curves_all_models(
+        classification_all_results_dic, 
+        k_chosen=10, 
+        X_train_after_var_thresh=X_train_after_var_thresh_class, 
+        y_train=y_train_class, 
+        task='classification'
+    )
     
