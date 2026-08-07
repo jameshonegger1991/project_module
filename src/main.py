@@ -47,7 +47,7 @@ from src.visualisations import (
     plot_residuals_from_all_results,
 )
 from src.model_training import evaluate_k_values, run_models
-
+from src.explainability import rashomon_set_builder
 
 
 if __name__ == "__main__":
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     for dir_path in [OUTPUTS_DIR, TABLES_DIR, PLOTS_DIR, MODELS_DIR, DATAFRAMES_DIR]:
         os.makedirs(dir_path, exist_ok=True)
-
+    """
     # 2. ========== GLOBAL EXPLORATORY DATA ANALYSIS ==========
     #get_descriptive_statistics(df_raw_with_correct_features, "GLOBAL DATA EXPLORATORY ANALYSIS (BEFORE CLEANING)")
     #get_descriptive_statistics(df_preprocessed, "GLOBAL DATA EXPLORATORY ANALYSIS (CLEANED WHOLE DATASET)")
@@ -182,4 +182,17 @@ if __name__ == "__main__":
         y_train=y_train_class, 
         task='classification'
     )
+    """
+
+    # 6. ========= EXPLAINABILITY ===========
+
+    # RASHOMON SET BUILDER
+    classification_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv'))
+    classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
+    regression_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'))
+    regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
+
+    rashomon_set_builder(regression_all_results_dic, k_nbr_of_features_chosen=15, task='regression', rashomon_threshold=0.05)
+    rashomon_set_builder(classification_all_results_dic, k_nbr_of_features_chosen=15, task='classification', rashomon_threshold=0.05)
+
     
