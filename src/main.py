@@ -30,10 +30,12 @@ from src.tables import (
     display_detailed_results_by_k,
     display_results,
     display_summary,
+    display_global_shap_rankings,
     generate_missing_values_report,
     get_descriptive_statistics,
 )
 from src.visualisations import (
+    barplot_global_shap_rankings,
     display_barplots,
     display_histograms,
     display_spearman_correlation_matrix,
@@ -45,9 +47,10 @@ from src.visualisations import (
     plot_learning_curves_all_models,
     plot_multiple_metrics_vs_features,
     plot_residuals_from_all_results,
+    shap_summary_plot,
 )
 from src.model_training import evaluate_k_values, run_models
-from src.explainability import rashomon_set_builder
+from src.explainability import global_shap_values_calculator, rashomon_set_builder
 
 
 if __name__ == "__main__":
@@ -92,14 +95,14 @@ if __name__ == "__main__":
     #display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
     
     # 4. ========== FEATURE SELECTION ==========
-
+    """
     #y_train/test for classification task
     y_train_class = pd.cut(y_train, bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
     y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
 
     # regression
     (final_features_ranking_reg, variance_treshold_df_reg, ranking_MI_df_reg, ranking_anova_df_reg, ranking_rfe_df_reg, X_train_after_var_thresh_reg, X_test_after_var_thresh_reg, selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
-    
+    """
     #classification
     (final_features_ranking_class, variance_treshold_df_class, ranking_MI_df_class, ranking_anova_df_class, ranking_rfe_df_class, X_train_after_var_thresh_class, X_test_after_var_thresh_class, selected_columns_var_thresh_class) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
     
@@ -192,7 +195,22 @@ if __name__ == "__main__":
     regression_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'))
     regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
 
-    rashomon_set_builder(regression_all_results_dic, k_nbr_of_features_chosen=15, task='regression', rashomon_threshold=0.05)
-    rashomon_set_builder(classification_all_results_dic, k_nbr_of_features_chosen=15, task='classification', rashomon_threshold=0.05)
+    # Build the Rashomon set based on the k-features chosen to train models
+    k_chosen = 10
+    rashomon_set = rashomon_set_builder(regression_all_results_dic, k_nbr_of_features_chosen= k_chosen, task='regression', rashomon_threshold=0.05)
+
+    # Create X_train/X_test for the related k-features selected
+    indices_k = regression_all_results_dic[k_chosen]['indices']
+    feature_names_k = regression_all_results_dic[k_chosen]['features']
+    X_train_k = X_train_after_var_thresh_reg[:, indices_k]
+    X_test_k = X_test_after_var_thresh_reg[:, indices_k]
+
+    # Compute global shap values
+    global_shap_rankings, shap_values_for_all_models = global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
+    display_global_shap_rankings(global_shap_rankings, k_chosen)
+    barplot_global_shap_rankings(global_shap_rankings, k_chosen)
+    shap_summary_plot(shap_values_for_all_models, X_test_k, feature_names_k)
+
+    
 
     

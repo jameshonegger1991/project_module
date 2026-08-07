@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import textwrap
 import numpy as np
+import shap
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import learning_curve
 from sklearn.preprocessing import LabelEncoder
@@ -543,3 +544,83 @@ def plot_learning_curves_all_models(all_results, k_chosen, X_train_after_var_thr
     print(f"Learning curves saved to: {save_path}")
 
     plt.show()
+
+###### SHAP ANALYSIS #####
+
+def barplot_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_k=10):
+
+    n_models = len(global_mean_absolute_shap_rankings_dict)
+    if n_models == 0:
+        print("No models found in the dictionary to plot.")
+        return
+
+    ncols = 2 if n_models > 1 else 1
+    nrows = (n_models + 1) // 2
+
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(14, 5 * nrows), squeeze=False)
+    axes = axes.flatten()
+
+    for i, (model_name, shap_ranking_df) in enumerate(global_mean_absolute_shap_rankings_dict.items()):
+        ax = axes[i]
+        df_plot = shap_ranking_df.head(top_k).copy().iloc[::-1]
+        
+        ax.barh(df_plot['Feature'], df_plot['Mean_Abs_SHAP'], color='blue', edgecolor='black', alpha=0.85)
+        
+        ax.set_xlabel('Mean Absolute SHAP Value', fontsize=10, fontweight='bold')
+        ax.set_ylabel('Features', fontsize=10, fontweight='bold')
+        ax.set_title(f'Top {top_k} SHAP Importance - {model_name}', fontsize=12, fontweight='bold')
+        ax.grid(axis='x', linestyle='--', alpha=0.7)
+
+    for j in range(n_models, len(axes)):
+        axes[j].axis('off')
+    fig.suptitle("Global SHAP Feature Importances", fontsize=16, fontweight='bold')
+    plt.tight_layout()
+
+    save_path = os.path.join(PLOTS_DIR, f"Global_SHAP_feature_importances_barplot.png")
+    plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
+    print(f"Global SHAP feature importances barplot saved to: {save_path}")
+
+    plt.show()
+
+def shap_summary_plot(shap_values, X_test, feature_names):
+    
+    #REFERENCE: https://medium.com/womenintechnology/understanding-model-predictions-with-shap-d7457f6a31c3
+    n_models = len(shap_values)
+    if n_models == 0:
+        print("No models found in the dictionary to plot.")
+        return
+
+    ncols = 2 if n_models > 1 else 1
+    nrows = (n_models + 1) // 2
+
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(14, 5 * nrows), squeeze=False)
+    axes = axes.flatten()
+
+    for i, (model_name, shap_values_array) in enumerate(shap_values.items()):
+        ax = axes[i]
+        explanation = shap.Explanation(
+            values = shap_values_array,
+            data = X_test,
+            feature_names = feature_names
+        )
+        
+        shap.plots.beeswarm(explanation, ax=ax, plot_size = None, show = False)
+        
+        ax.set_xlabel('SHAP Value (Impact on model output)', fontsize=10, fontweight='bold')
+        ax.set_ylabel('Features', fontsize=10, fontweight='bold')
+        ax.set_title(f'SHAP Importance - {model_name}', fontsize=12, fontweight='bold')
+        ax.grid(axis='x', linestyle='--', alpha=0.7)
+
+    for j in range(n_models, len(axes)):
+        axes[j].axis('off')
+
+    fig.suptitle("SHAP Summary plot", fontsize=16, fontweight='bold')
+    plt.tight_layout()
+
+    save_path = os.path.join(PLOTS_DIR, f"SHAP_summary_plot.png")
+    plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
+    print(f"SHAP summary plot saved to: {save_path}")
+
+    plt.show()
+    
+
