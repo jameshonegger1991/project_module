@@ -17,7 +17,7 @@ CLASS_LABELS_DICT = {0: "Low Proficient", 1: "Medium Proficient", 2: "High Achie
 CLASS_LABELS = ["Low Proficient", "Medium Proficient", "High Achievers"]
 
 OUTPUTS_DIR = "outputs"
-DATAFRAMES_DIR = "outputs/dataframes"
+SAVEDFILES_DIR = "outputs/saved_files"
 TABLES_DIR = "outputs/tables"
 PLOTS_DIR = "outputs/plots"
 MODELS_DIR = "outputs/models"

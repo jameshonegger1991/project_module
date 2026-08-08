@@ -583,7 +583,7 @@ def barplot_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_k=
     plt.show()
 
 def shap_summary_plot(shap_values, X_test, feature_names):
-    
+
     #REFERENCE: https://medium.com/womenintechnology/understanding-model-predictions-with-shap-d7457f6a31c3
     n_models = len(shap_values)
     if n_models == 0:
@@ -596,11 +596,15 @@ def shap_summary_plot(shap_values, X_test, feature_names):
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(14, 5 * nrows), squeeze=False)
     axes = axes.flatten()
 
-    for i, (model_name, shap_values_array) in enumerate(shap_values.items()):
+    for i, (model_name, model_data) in enumerate(shap_values.items()):
         ax = axes[i]
+        
+        shap_vals = model_data['shap_values']
+        x_subset = model_data['X_test_subset']
+
         explanation = shap.Explanation(
-            values = shap_values_array,
-            data = X_test,
+            values = shap_vals,
+            data = x_subset,
             feature_names = feature_names
         )
         
@@ -618,7 +622,7 @@ def shap_summary_plot(shap_values, X_test, feature_names):
     plt.tight_layout()
 
     save_path = os.path.join(PLOTS_DIR, f"SHAP_summary_plot.png")
-    plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
+    plt.savefig(save_path, dpi=300, bbox_inches='tight') 
     print(f"SHAP summary plot saved to: {save_path}")
 
     plt.show()

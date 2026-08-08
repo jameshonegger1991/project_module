@@ -59,7 +59,7 @@ def rashomon_set_builder(model_training_all_results_dic, k_nbr_of_features_chose
 
     return rashomon_set_dict
 
-def global_shap_values_calculator(rashomon_set_dict, X_train, X_test, feature_names, task='regression'):
+def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, feature_names, task='regression'):
 # INSPIRATION: - https://stackoverflow.com/questions/72599807/how-to-extract-the-most-important-features-from-a-ml-model-using-shap-why-are 
 #              - https://www.geeksforgeeks.org/machine-learning/shap-with-a-linear-svc-model-from-sklearn-using-pipeline/
     
@@ -72,6 +72,7 @@ def global_shap_values_calculator(rashomon_set_dict, X_train, X_test, feature_na
         best_estimator = model_grid_search.best_estimator_
 
         if task == 'regression':
+
             if model_name == "LR":
                 scaler = best_estimator.named_steps.get('scaler', None)
                 X_train_for_shap= scaler.transform(X_train) if scaler else X_train
@@ -79,14 +80,39 @@ def global_shap_values_calculator(rashomon_set_dict, X_train, X_test, feature_na
                 explainer = shap.LinearExplainer(best_estimator.named_steps['model'], X_train_for_shap, feature_perturbation="correlation_dependent") # helps keeping realism in profile computation by computing "smart" conditional expectations. SOURCE: https://shap.readthedocs.io/en/latest/example_notebooks/tabular_examples/linear_models/Math%20behind%20LinearExplainer%20with%20correlation%20feature%20perturbation.html 
                 shap_values = explainer.shap_values(X_test_for_shap)
 
-            elif model_name == "RF":
-                continue
-            elif model_name == "XGBoost":
-                continue
+            elif model_name == "RF" or model_name == "XGBoost":
+                explainer = shap.TreeExplainer(best_estimator.named_steps['model'])
+                shap_values = explainer.shap_values(X_test)
+
             elif model_name == "SVR":
-                continue
+
+                #Background_sample and X_test_sample processes are required to limit the computational cost of this operation.
+                # shap.kmeans() is preferred over shap.sample() as it selects better representative data points.
+                max_samples = 30 
+
+                if X_test.shape[0] > max_samples:
+
+                    if hasattr(X_test, "sample"):
+                        X_test_sample = X_test.sample(n=max_samples, random_state=7)
+
+                    else:
+                        indices = np.random.choice(X_test.shape[0], size=max_samples, replace=False)
+                        X_test_sample = X_test[indices]
+                else:
+                    X_test_sample = X_test
+                    
+                scaler = best_estimator.named_steps.get('scaler', None)
+                X_train_for_shap= scaler.transform(X_train) if scaler else X_train
+                X_test_for_shap = scaler.transform(X_test_sample) if scaler else X_test_sample
+
+                background_sample = shap.kmeans(X_train_for_shap, 50)
+                explainer = shap.KernelExplainer(best_estimator.named_steps['model'].predict, background_sample)
+                shap_values = explainer.shap_values(X_test_for_shap)
+
+            else:
+                raise ValueError(f"Unknown model: {model_name}. The global_shap_values_calculator is calibrated to compute only SHAP values for regression models.")
+
             # SOURCE: https://stackoverflow.com/questions/77474923/calculate-the-mean-of-absolute-shap-values-across-all-classes 
-            abs_shap_values = np.abs(shap_values)
             feature_importance_overall = np.mean(np.abs(shap_values), axis=0)
 
             ranking_df = pd.DataFrame({
@@ -97,6 +123,6 @@ def global_shap_values_calculator(rashomon_set_dict, X_train, X_test, feature_na
             ranking_df['SHAP_Ranking'] = ranking_df.index + 1
 
         global_mean_absolute_shap_rankings[model_name] = ranking_df
-        individual_shap_values_for_every_model[model_name] = shap_values
+        individual_shap_values_for_every_model[model_name] = {'shap_values': shap_values,'X_test_subset': X_test_for_shap if model_name in ["LR", "SVR"] else X_test}
     
     return global_mean_absolute_shap_rankings, individual_shap_values_for_every_model

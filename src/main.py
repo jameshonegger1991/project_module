@@ -11,7 +11,7 @@ from src.config import (
     TABLES_DIR,
     PLOTS_DIR,
     MODELS_DIR,
-    DATAFRAMES_DIR,
+    SAVEDFILES_DIR,
 )
 from src.dataset_building import reduced_swiss_dataset
 from src.dataset_cleaning_and_preprocessing import (
@@ -50,7 +50,7 @@ from src.visualisations import (
     shap_summary_plot,
 )
 from src.model_training import evaluate_k_values, run_models
-from src.explainability import global_shap_values_calculator, rashomon_set_builder
+from src.SHAP_analysis import local_and_global_shap_values_calculator, rashomon_set_builder
 
 
 if __name__ == "__main__":
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     (X_train_imputed, X_test_imputed, X_train, X_test, y_train, y_test, df_raw_with_correct_features, df_preprocessed, numeric_imputed_feature_names, all_imputed_feature_names, removed_missing_columns) = run_preprocessing_pipeline(df_raw, MISSING_VALUES_THRESHOLD)
 
-    for dir_path in [OUTPUTS_DIR, TABLES_DIR, PLOTS_DIR, MODELS_DIR, DATAFRAMES_DIR]:
+    for dir_path in [OUTPUTS_DIR, TABLES_DIR, PLOTS_DIR, MODELS_DIR, SAVEDFILES_DIR]:
         os.makedirs(dir_path, exist_ok=True)
     """
     # 2. ========== GLOBAL EXPLORATORY DATA ANALYSIS ==========
@@ -124,14 +124,14 @@ if __name__ == "__main__":
     )
     
     # Save regression results DataFrame to tables folder
-    regression_results_df.to_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'), index=False)
-    print(f" Regression results saved to '{os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv')}'")
+    regression_results_df.to_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'), index=False)
+    print(f" Regression results saved to '{os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv')}'")
 
     # Save regression all_results dictionary to models folder
     joblib.dump(regression_all_results_dic, os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
     print(f" Regression all_results saved to '{os.path.join(MODELS_DIR, 'regression_all_results.pkl')}'")
 
-    regression_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'))
+    regression_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'))
     regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
 
     display_detailed_results_by_k(regression_all_results_dic)
@@ -162,14 +162,14 @@ if __name__ == "__main__":
         )
 
     # Save classification results DataFrame to tables folder
-    classification_results_df.to_csv(os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv'), index=False)
-    print(f"Classification results saved to '{os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv')}'")
+    classification_results_df.to_csv(os.path.join(SAVEDFILES_DIR, 'classification_results_by_k.csv'), index=False)
+    print(f"Classification results saved to '{os.path.join(SAVEDFILES_DIR, 'classification_results_by_k.csv')}'")
 
     # Save classification all_results dictionary to models folder
     joblib.dump(classification_all_results_dic, os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
     print(f"Classification all_results saved to '{os.path.join(MODELS_DIR, 'classification_all_results.pkl')}'")
     
-    classification_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv'))
+    classification_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'classification_results_by_k.csv'))
     classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
 
     display_detailed_results_by_k(classification_all_results_dic)
@@ -190,9 +190,9 @@ if __name__ == "__main__":
     # 6. ========= EXPLAINABILITY ===========
 
     # RASHOMON SET BUILDER
-    classification_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'classification_results_by_k.csv'))
+    classification_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'classification_results_by_k.csv'))
     classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
-    regression_results_df = pd.read_csv(os.path.join(DATAFRAMES_DIR, 'regression_results_by_k.csv'))
+    regression_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'))
     regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
 
     # Build the Rashomon set based on the k-features chosen to train models
@@ -206,7 +206,19 @@ if __name__ == "__main__":
     X_test_k = X_test_after_var_thresh_reg[:, indices_k]
 
     # Compute global shap values
-    global_shap_rankings, shap_values_for_all_models = global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
+    global_shap_rankings, shap_values_for_all_models = local_and_global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
+
+
+    shap_cache_path = os.path.join(SAVEDFILES_DIR, 'shap_results_cache.joblib')
+    joblib.dump({
+            "rankings": global_shap_rankings,
+            "shap_values": shap_values_for_all_models
+        }, shap_cache_path)
+
+    cached_shap_data = joblib.load(shap_cache_path)
+    global_shap_rankings = cached_shap_data["rankings"]
+    shap_values_for_all_models = cached_shap_data["shap_values"]
+
     display_global_shap_rankings(global_shap_rankings, k_chosen)
     barplot_global_shap_rankings(global_shap_rankings, k_chosen)
     shap_summary_plot(shap_values_for_all_models, X_test_k, feature_names_k)
