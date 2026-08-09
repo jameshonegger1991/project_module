@@ -56,6 +56,7 @@ from src.SHAP_analysis import (
     inter_model_concordance_assessment, 
     feature_agreement_stats,
     intra_model_stability_assessment,
+    assess_features_robustness,
 )
 
 
@@ -241,3 +242,6 @@ if __name__ == "__main__":
     print()
     intra_model_assessment_result = intra_model_stability_assessment(shap_values_for_all_models, feature_names_k)
     print(intra_model_assessment_result)
+    print()
+    final_classification = assess_features_robustness(global_shap_rankings, intra_model_assessment_result, top_k=5)
+    print(final_classification)
