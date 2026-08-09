@@ -127,7 +127,6 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
     
     return global_mean_absolute_shap_rankings, individual_shap_values_for_every_model
 
-
 def inter_model_concordance_assessment(shap_global_rankings_dic, top_k_features_concordance):
 
     results=[]
@@ -159,9 +158,39 @@ def inter_model_concordance_assessment(shap_global_rankings_dic, top_k_features_
 
     return pd.DataFrame(results)
 
+def feature_agreement_stats(shap_global_rankings_dic):
+    # Creates a table showing the SHAP rank of each feature across all models,
+    # along with the mean rank and standard deviation to measure feature-wise agreement.
+    model_names = list(shap_global_rankings_dic.keys())
+    results = []
+
+    for model in model_names:
+        df_model = shap_global_rankings_dic[model]
+
+        for _, row in df_model.iterrows():
+            results.append({
+                'Model': model,
+                'Feature': row['Feature'],
+                f"SHAP_Ranking": row['SHAP_Ranking']
+            })
+
+    results_df = pd.DataFrame(results)
+    results_df = results_df.pivot(index='Feature', columns='Model', values='SHAP_Ranking')
+    results_df = results_df.reset_index().rename_axis(columns=None)
+    results_df = results_df.rename(columns={modele: f"{modele} SHAP RANKING" for modele in model_names})
+
+    #Mean rank + standard deviation per feature
+    shap_columns = [f"{modele} SHAP RANKING" for modele in model_names]
+    results_df['Mean SHAP rank'] = results_df[shap_columns].mean(axis=1)
+    results_df['Standard deviation SHAP rank'] = results_df[shap_columns].std(axis=1)
+    results_df = results_df.sort_values(by='Mean SHAP rank', ascending=True)
 
 
-                       
+    return results_df
+
+            
+
+        
 
     
         

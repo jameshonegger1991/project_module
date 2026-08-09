@@ -50,7 +50,8 @@ from src.visualisations import (
     shap_summary_plot,
 )
 from src.model_training import evaluate_k_values, run_models
-from src.SHAP_analysis import local_and_global_shap_values_calculator, rashomon_set_builder, inter_model_concordance_assessment
+from src.SHAP_analysis import local_and_global_shap_values_calculator, rashomon_set_builder, inter_model_concordance_assessment, feature_agreement_stats
+
 
 
 
@@ -228,3 +229,5 @@ if __name__ == "__main__":
     shap_summary_plot(shap_values_for_all_models, X_test_k, feature_names_k)
     inter_model_concordance_df = inter_model_concordance_assessment(global_shap_rankings, top_k_features_concordance=5)
     print(inter_model_concordance_df)
+    feature_agreement_stats_df = feature_agreement_stats(global_shap_rankings)
+    print(feature_agreement_stats_df)
