@@ -459,9 +459,7 @@ def display_summary(results_df, task):
 ###### SHAP ANALYSIS #####
 
 def display_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_n=10):
-    """
-    Displays the global SHAP feature importance rankings for each model in the Rashomon set.
-    """
+
     for model_name, ranking_df in global_mean_absolute_shap_rankings_dict.items():
         print(f"\n{'='*60}")
         print(f"SHAP FEATURE IMPORTANCE RANKING : {model_name}, top {top_n} features")

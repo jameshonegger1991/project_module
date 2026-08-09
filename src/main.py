@@ -50,7 +50,11 @@ from src.visualisations import (
     shap_summary_plot,
 )
 from src.model_training import evaluate_k_values, run_models
-from src.SHAP_analysis import local_and_global_shap_values_calculator, rashomon_set_builder
+from src.SHAP_analysis import local_and_global_shap_values_calculator, rashomon_set_builder, inter_model_concordance_assessment
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -206,15 +210,15 @@ if __name__ == "__main__":
     X_test_k = X_test_after_var_thresh_reg[:, indices_k]
 
     # Compute global shap values
-    global_shap_rankings, shap_values_for_all_models = local_and_global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
-
-
     shap_cache_path = os.path.join(SAVEDFILES_DIR, 'shap_results_cache.joblib')
+
+    """
+    global_shap_rankings, shap_values_for_all_models = local_and_global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
     joblib.dump({
             "rankings": global_shap_rankings,
             "shap_values": shap_values_for_all_models
         }, shap_cache_path)
-
+    """
     cached_shap_data = joblib.load(shap_cache_path)
     global_shap_rankings = cached_shap_data["rankings"]
     shap_values_for_all_models = cached_shap_data["shap_values"]
@@ -222,7 +226,5 @@ if __name__ == "__main__":
     display_global_shap_rankings(global_shap_rankings, k_chosen)
     barplot_global_shap_rankings(global_shap_rankings, k_chosen)
     shap_summary_plot(shap_values_for_all_models, X_test_k, feature_names_k)
-
-    
-
-    
+    inter_model_concordance_df = inter_model_concordance_assessment(global_shap_rankings, top_k_features_concordance=5)
+    print(inter_model_concordance_df)

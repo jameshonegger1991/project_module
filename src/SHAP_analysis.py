@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import shap
-from sklearn.preprocessing import StandardScaler
+from scipy.stats import kendalltau, spearmanr
 
 def rashomon_set_builder(model_training_all_results_dic, k_nbr_of_features_chosen, task: str = 'regression', rashomon_threshold: float = 0.05):
     """
@@ -75,7 +75,7 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
 
             if model_name == "LR":
                 scaler = best_estimator.named_steps.get('scaler', None)
-                X_train_for_shap= scaler.transform(X_train) if scaler else X_train
+                X_train_for_shap = scaler.transform(X_train) if scaler else X_train
                 X_test_for_shap = scaler.transform(X_test) if scaler else X_test
                 explainer = shap.LinearExplainer(best_estimator.named_steps['model'], X_train_for_shap, feature_perturbation="correlation_dependent") # helps keeping realism in profile computation by computing "smart" conditional expectations. SOURCE: https://shap.readthedocs.io/en/latest/example_notebooks/tabular_examples/linear_models/Math%20behind%20LinearExplainer%20with%20correlation%20feature%20perturbation.html 
                 shap_values = explainer.shap_values(X_test_for_shap)
@@ -126,3 +126,42 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
         individual_shap_values_for_every_model[model_name] = {'shap_values': shap_values,'X_test_subset': X_test_for_shap if model_name in ["LR", "SVR"] else X_test}
     
     return global_mean_absolute_shap_rankings, individual_shap_values_for_every_model
+
+
+def inter_model_concordance_assessment(shap_global_rankings_dic, top_k_features_concordance):
+
+    results=[]
+    model_names = list(shap_global_rankings_dic.keys())
+
+    for i in range(len(model_names)):
+        for j in range(i + 1, len(model_names)):
+
+            df_model_i = shap_global_rankings_dic[model_names[i]]
+            df_model_j = shap_global_rankings_dic[model_names[j]]
+
+            df_merged = pd.merge(df_model_i[['Feature','SHAP_Ranking']], df_model_j[['Feature','SHAP_Ranking']], on='Feature', suffixes=(f'_{model_names[i]}', f'_{model_names[j]}'))
+            kendall_coeff, kendall_p_value = kendalltau(df_merged[f'SHAP_Ranking_{model_names[i]}'], df_merged[f'SHAP_Ranking_{model_names[j]}'])
+            spearman_coeff, spearman_p_value = spearmanr(df_merged[f'SHAP_Ranking_{model_names[i]}'], df_merged[f'SHAP_Ranking_{model_names[j]}'])
+
+            top_k_features_model_i = set(df_model_i.head(top_k_features_concordance)['Feature'])
+            top_k_features_model_j = set(df_model_j.head(top_k_features_concordance)['Feature'])
+            overlap_ratio = len(top_k_features_model_i & top_k_features_model_j) / top_k_features_concordance
+
+            results.append({
+                'Model 1': model_names[i],
+                'Model 2': model_names[j],
+                'Kendall_coeff': kendall_coeff,
+                'Kendall p value': kendall_p_value,
+                'Spearman coeff': spearman_coeff,
+                'Spearman p value': spearman_p_value,
+                'Overlap ratio': overlap_ratio
+            })
+
+    return pd.DataFrame(results)
+
+
+
+                       
+
+    
+        
