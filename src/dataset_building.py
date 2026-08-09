@@ -145,7 +145,7 @@ def reduced_swiss_dataset()-> pd.DataFrame:
         'MATHEFF',         # Mathematics self-efficacy
         'ANXMAT',          # Mathematics anxiety
         'REPEAT',          # Grade repetition
-        'ST062Q01TA',      # Student abstenteeism
+        'ST062Q01TA',      # Student absenteeism
         'DISCLIM',         # Disciplinary climate in mathematics
         'STUBEHA',         # Student-related factors affecting school climate
         'STAFFSHORT',      # Shortage of educational staff

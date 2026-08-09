@@ -7,20 +7,14 @@ from src.config import VARIANCE_THRESHOLD
 
 def generate_missing_values_report(df, threshold, title):
     """
-    Generate a comprehensive missing values report for both columns and rows.
-    
-    Parameters:
-        df: DataFrame to analyse
-        threshold: Percentage threshold for highlighting high missingness (default: 70%)
+    Display missing-value statistics for columns and rows.
     """
     col_pct = get_missing_percentages_per_column(df)
     row_pct = get_missing_percentages_per_row(df)
 
-    #1. Columns with missing rate > threshold
     cols_above_threshold = col_pct[col_pct > threshold]
     cols_above_threshold_df = pd.DataFrame({'Column': cols_above_threshold.index,'Missing %': cols_above_threshold.values}).sort_values(by = 'Missing %', ascending = False)
 
-    #2. Rows statistics
     total_rows = len(df)
     rows_missing_50 = (row_pct >= 50).sum()
     rows_missing_70 = (row_pct >= 70).sum()
@@ -32,8 +26,6 @@ def generate_missing_values_report(df, threshold, title):
     median_missing_pct = rows_with_missing.median() if len(rows_with_missing) > 0 else 0
     rows_with_missing_count = len(rows_with_missing)
 
-    #3. Display
-    
     print()
     print("=" * 80)
     print(f"{title}")
@@ -80,7 +72,6 @@ def get_descriptive_statistics(df, title):
     print("=" * 80)
     print()
     
-    # 1. Shape
     print("=" * 80)
     print("SHAPE OF THE DATASET")
     print("=" * 80)
@@ -88,7 +79,6 @@ def get_descriptive_statistics(df, title):
     print(df.shape)
     print()
 
-    # 2. Head
     print("=" * 80)
     print("HEAD OF THE DATASET")
     print("=" * 80)
@@ -96,7 +86,6 @@ def get_descriptive_statistics(df, title):
     print(df.head())
     print()
     
-    # 3. Descriptive statistics
     print("=" * 80)
     print("DESCRIPTIVE STATISTICS")
     print("=" * 80)
@@ -105,7 +94,6 @@ def get_descriptive_statistics(df, title):
     print(numeric_df.describe())
     print()
     
-    # 4. Info
     print("=" * 80)
     print("DATA TYPES")
     print("=" * 80)
@@ -119,7 +107,6 @@ def get_descriptive_statistics(df, title):
     print(type_summary.to_string(index=False))
     print()
     
-    # 5. Skewness
     print("=" * 80)
     print("SKEWNESS OF THE DATASET")
     print("=" * 80)
@@ -148,13 +135,8 @@ def display_correlations_with_target(df, target = "PV1MATH"):
         print(f"The target variable '{target}' was not found.")
         return
 
-    # Calculate correlations with the target and remove the target itself.
     correlations = (df.corr(method="spearman")[target].drop(target))
-
-    # Sort positive correlations from strongest to weakest.
     positive_correlations = (correlations[correlations > 0].sort_values(ascending=False).rename("Correlation").to_frame())
-
-    # Sort negative correlations from strongest to weakest.
     positive_correlations.index.name = "Feature"
 
     negative_correlations = (correlations[correlations < 0].sort_values(ascending=True).rename("Correlation").to_frame())
@@ -174,24 +156,15 @@ def display_correlations_between_features(df, target = "PV1MATH", corr_threshold
 
     It also displays feature pairs whose absolute correlation exceeds
     the specified threshold, indicating a potential risk of multicollinearity.
-
-    Parameters:
-    - df (pd.DataFrame): The input DataFrame.
-    - target (str): The target variable to exclude.
-    - corr_threshold (float): The correlation threshold used to identify
-      a potential risk of multicollinearity. By default, it is set to 0.70, 
-      representing a relatively conservative threshold.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot calculate correlations.")
         return
 
-    # Remove the target variable before calculating correlations.
     features = df.drop(columns=[target], errors="ignore")
     correlation_matrix = features.corr(method="spearman")
     correlations = []
 
-    # It keeps each variable pair only once.
     for i in range(len(correlation_matrix.columns)):
         for j in range(i + 1, len(correlation_matrix.columns)):
             correlations.append({

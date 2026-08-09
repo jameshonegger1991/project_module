@@ -50,7 +50,14 @@ from src.visualisations import (
     shap_summary_plot,
 )
 from src.model_training import evaluate_k_values, run_models
-from src.SHAP_analysis import local_and_global_shap_values_calculator, rashomon_set_builder, inter_model_concordance_assessment, feature_agreement_stats
+from src.SHAP_analysis import (
+    local_and_global_shap_values_calculator, 
+    rashomon_set_builder, 
+    inter_model_concordance_assessment, 
+    feature_agreement_stats,
+    intra_model_stability_assessment,
+)
+
 
 
 
@@ -106,10 +113,10 @@ if __name__ == "__main__":
     y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
 
     # regression
-    (final_features_ranking_reg, variance_treshold_df_reg, ranking_MI_df_reg, ranking_anova_df_reg, ranking_rfe_df_reg, X_train_after_var_thresh_reg, X_test_after_var_thresh_reg, selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
+    (final_features_ranking_reg, variance_threshold_df_reg, ranking_MI_df_reg, ranking_anova_df_reg, ranking_rfe_df_reg, X_train_after_var_thresh_reg, X_test_after_var_thresh_reg, selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
     """
     #classification
-    (final_features_ranking_class, variance_treshold_df_class, ranking_MI_df_class, ranking_anova_df_class, ranking_rfe_df_class, X_train_after_var_thresh_class, X_test_after_var_thresh_class, selected_columns_var_thresh_class) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
+    (final_features_ranking_class, variance_threshold_df_class, ranking_MI_df_class, ranking_anova_df_class, ranking_rfe_df_class, X_train_after_var_thresh_class, X_test_after_var_thresh_class, selected_columns_var_thresh_class) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
     
     # 5. ========= MODEL TRAINING ===========
     
@@ -231,3 +238,6 @@ if __name__ == "__main__":
     print(inter_model_concordance_df)
     feature_agreement_stats_df = feature_agreement_stats(global_shap_rankings)
     print(feature_agreement_stats_df)
+    print()
+    intra_model_assessment_result = intra_model_stability_assessment(shap_values_for_all_models, feature_names_k)
+    print(intra_model_assessment_result)

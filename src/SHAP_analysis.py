@@ -33,7 +33,7 @@ def rashomon_set_builder(model_training_all_results_dic, k_nbr_of_features_chose
 
     best_score = max(model_scores.values())
     
-    # Absolute threshold alignmed with the project proposal (Delta <= 0.05)
+    # Absolute threshold aligned with the project proposal (Delta <= 0.05)
     lowest_score_acceptable = best_score - rashomon_threshold
 
     rashomon_set_dict = {}
@@ -159,8 +159,7 @@ def inter_model_concordance_assessment(shap_global_rankings_dic, top_k_features_
     return pd.DataFrame(results)
 
 def feature_agreement_stats(shap_global_rankings_dic):
-    # Creates a table showing the SHAP rank of each feature across all models,
-    # along with the mean rank and standard deviation to measure feature-wise agreement.
+
     model_names = list(shap_global_rankings_dic.keys())
     results = []
 
@@ -177,18 +176,83 @@ def feature_agreement_stats(shap_global_rankings_dic):
     results_df = pd.DataFrame(results)
     results_df = results_df.pivot(index='Feature', columns='Model', values='SHAP_Ranking')
     results_df = results_df.reset_index().rename_axis(columns=None)
-    results_df = results_df.rename(columns={modele: f"{modele} SHAP RANKING" for modele in model_names})
+    results_df = results_df.rename(columns={model: f"{model} SHAP RANKING" for model in model_names})
 
-    #Mean rank + standard deviation per feature
-    shap_columns = [f"{modele} SHAP RANKING" for modele in model_names]
+    shap_columns = [f"{model} SHAP RANKING" for model in model_names]
     results_df['Mean SHAP rank'] = results_df[shap_columns].mean(axis=1)
     results_df['Standard deviation SHAP rank'] = results_df[shap_columns].std(axis=1)
     results_df = results_df.sort_values(by='Mean SHAP rank', ascending=True)
 
-
     return results_df
 
+def intra_model_stability_assessment(local_shap_dict, feature_names, n_iterations=500):
+
+    # Reuse local SHAP values to avoid recomputing SHAP for every bootstrap
+    bootstrap_results = {}
+
+    
+    for model_name in local_shap_dict:
+        print(f"DEBUG: Model treatment: {model_name}")
+        
+        data = local_shap_dict[model_name]
+        shap_matrix = data['shap_values']  
+        
+        n_samples = shap_matrix.shape[0]   
+        n_features = shap_matrix.shape[1]  
+        
+        # Store feature importance for each bootstrap.
+        all_estimations = np.zeros((n_iterations, n_features))
+
+        for iteration in range(n_iterations):
             
+            random_indices = []
+            for _ in range(n_samples):
+                index = np.random.randint(0, n_samples) 
+                random_indices.append(index)
+
+            bootstrap_sample = np.zeros((n_samples, n_features))
+            for i in range(n_samples):
+                index = random_indices[i]
+                bootstrap_sample[i, :] = shap_matrix[index, :]
+            
+            importances = np.zeros(n_features)
+            for feature in range(n_features):
+                shap_values = bootstrap_sample[:, feature]
+                absolute_shap_values = np.abs(shap_values)
+                importances[feature] = np.mean(absolute_shap_values)
+            
+            all_estimations[iteration, :] = importances
+        
+        # For each feature, the mean of the mean importances obtained from each bootstrap iteration is computed.
+        means_estimations = np.mean(all_estimations, axis=0)
+        
+        # For each feature, the standard deviation of the mean importances obtained from each bootstrap iteration is computed.
+        standard_deviation = np.std(all_estimations, axis=0)
+        
+        # Coefficient of variation = standard deviation / mean
+        cv = np.zeros(n_features)
+        for feature in range(n_features):
+            if means_estimations[feature] > 0:
+                cv[feature] = standard_deviation[feature] / means_estimations[feature]
+            else:
+                cv[feature] = 0
+        
+        results = []
+        for feature in range(n_features):
+            results.append({
+                'Feature': feature_names[feature],
+                'Mean Global SHAP': means_estimations[feature],
+                'Standard deviation of Global SHAP': standard_deviation[feature],
+                'Coefficient of Variation': cv[feature]
+            })
+        
+        df_results = pd.DataFrame(results)
+        df_results = df_results.sort_values(by='Mean Global SHAP', ascending=False)
+        df_results = df_results.reset_index(drop=True)
+        
+        bootstrap_results[model_name] = df_results
+    
+    return bootstrap_results
 
         
 

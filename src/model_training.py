@@ -18,8 +18,7 @@ from src.tables import display_results
 
 def run_models(X_train, y_train, X_test, y_test, model_names, task):
     """
-    It trains and evaluates multiple models for regression or classification tasks 
-    and returns the outputs into a dictionary containing the fitted models, predictions, and performance metrics.
+    Train and evaluate the regression or classification models.
     """
     
     results = {}
@@ -120,7 +119,6 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             test_rmse = np.sqrt(test_mse)
             test_mae = mean_absolute_error(y_test, y_test_pred)
             
-            # For Lasso only
             if is_lasso:
                 coefs = model.best_estimator_.named_steps['model'].coef_
                 n_selected = sum(abs(coefs) > 1e-6)
@@ -129,35 +127,33 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 print(f"Best alpha        : {best_alpha}")
                 print(f"Features selected : {n_selected}/{p}")
             
-            # Store all metrics in results dictionary for later aggregation
             results[name] = {
                 'model': model,
                 'y_pred': y_test_pred,
                 'y_test_true': y_test, 
                 'type': 'regression',
-                # Training metrics
+
                 'train_r2': train_r2,
                 'train_mse': train_mse,
                 'train_rmse': train_rmse,
                 'train_mae': train_mae,
-                # Test metrics
+
                 'test_r2': test_r2,
                 'test_r2_adj': test_r2_adj,
                 'test_mse': test_mse,
                 'test_rmse': test_rmse,
                 'test_mae': test_mae,
-                # Gap
+
                 'gap_r2': train_r2 - test_r2,
                 'gap': train_r2 - test_r2,
                 'best_cv_score': model.best_score_,
-                # Lasso-specific
+
                 'n_selected': n_selected if is_lasso else None,
                 'best_alpha': best_alpha if is_lasso else None
             }
     
     elif task == "classification":
         
-        # Store original y for later use (before encoding)
         y_train_original = y_train.copy() if hasattr(y_train, 'copy') else y_train
         y_test_original = y_test.copy() if hasattr(y_test, 'copy') else y_test
         
@@ -230,7 +226,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 )
                 
             elif name == "XGBoost":
-                # XGBoost requires numeric labels for classification. Thus, string labels (e.g., 'High Achievers', 'Low Proficient') must be encoded as integers.
+                # XGBoost requires numeric labels for classification. 
                 encoder = LabelEncoder()
                 y_train_use = encoder.fit_transform(y_train_original)
                 y_test_use = encoder.transform(y_test_original)
@@ -296,7 +292,6 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 print(f"Unknown model: {name}. Skipping.")
                 continue
             
-            # Train
             if name == "XGBoost" and encoder is not None:
                 model.fit(X_train, y_train_use, model__sample_weight=sample_weights)
             else:
@@ -305,7 +300,6 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
             
-            # If XGBoost, decode predictions for display
             if name == "XGBoost" and encoder is not None:
                 y_test_pred_display = encoder.inverse_transform(y_test_pred)
                 y_test_true_display = encoder.inverse_transform(y_test_use)
@@ -313,7 +307,6 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 y_test_pred_display = y_test_pred
                 y_test_true_display = y_test_use
             
-            # Metrics
             train_accuracy = accuracy_score(y_train_use, y_train_pred)
             test_accuracy = accuracy_score(y_test_use, y_test_pred)
             train_f1_weighted = f1_score(y_train_use, y_train_pred, average='weighted')

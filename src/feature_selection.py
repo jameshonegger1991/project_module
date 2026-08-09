@@ -24,7 +24,7 @@ from src.tables import (
 
 def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESHOLD):
     """
-    Selects features whose variance is above the specified threshold and returns the results as a DataFrame.
+    Remove features below the variance threshold.
     """
 
     if X_train.shape[1] != len(feature_names):
@@ -51,8 +51,7 @@ def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
     Returns the Mutual Information (MI) ranking of features in a DataFrame. 
     """
 
-    # modular feature selection test able to work either with regression or classification tasks.
-    # Mutual information test has the advantage to be model-independent.
+    # MI captures non-linear dependencies.
     # REFERENCES:
     # - https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.mutual_info_regression.html
     # - https://medium.com/@suvendulearns/decoding-mutual-information-mi-a-guide-for-machine-learning-practitioners-b0f0ca0b30c9  
@@ -130,7 +129,6 @@ def summarise_feature_rankings(ranking_dfs, method_names = None):
     for i in range(1, len(ranking_dfs)):
         df = ranking_dfs[i][['Feature', 'Ranking']].copy()
         df = df.rename(columns={'Ranking': method_names[i]})
-        # Merge on 'Feature' to correctly align the rankings.
         combined_df = combined_df.merge(df, on='Feature', how='outer')
     
     combined_df['Sum of ranks'] = combined_df[method_names].sum(axis=1)
@@ -159,10 +157,10 @@ def select_top_features(combined_rankings, k = 20):
 
 def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_threshold = VARIANCE_THRESHOLD, task: str = 'regression'):
     """
-    Runs the full feature selection pipeline and returns the final ranking, individual ranking dataframes, and the filtered datasets.
+    Run the complete feature selection pipeline.
     """
-    variance_treshold_df, selected_columns_var_thresh, threshold = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
-    display_variance_threshold(variance_treshold_df, threshold, selected_columns_var_thresh, feature_names)
+    variance_threshold_df, selected_columns_var_thresh, threshold = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
+    display_variance_threshold(variance_threshold_df, threshold, selected_columns_var_thresh, feature_names)
 
     selected_indices = [feature_names.index(col) for col in selected_columns_var_thresh]
     X_train_after_var_thresh = X_train[:, selected_indices]
@@ -183,4 +181,4 @@ def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_
     #top_features, k = select_top_features(final_features_ranking, 10)
     #display_top_features(top_features, k)
 
-    return final_features_ranking, variance_treshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh
+    return final_features_ranking, variance_threshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh

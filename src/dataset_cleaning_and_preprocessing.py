@@ -19,7 +19,7 @@ from src.config import (
 
 
 def add_derived_features_and_clean(df):
-    """Create MMINS and MEAN_ESCS, then remove identifiers/source features and return a copy."""
+    """Create MMINS and MEAN_ESCS, then remove identifiers/source features."""
     result = df.copy()
     result["MMINS"] = result["ST059Q01TA"] * result["SC175Q01JA"]
     result["MEAN_ESCS"] = result.groupby("CNTSCHID")["ESCS"].transform("mean")
@@ -144,7 +144,7 @@ def create_eda_preprocessor(X_train):
 
 
 def create_imputed_dataframe(X_imputed: np.ndarray, preprocessor: ColumnTransformer, y):
-    """Convert a transformed matrix to a labelled DataFrame and append the target."""
+    """Convert the transformed matrix back into a DataFrame"""
     feature_names = preprocessor.get_feature_names_out()
     result = pd.DataFrame(X_imputed, columns=feature_names, index=y.index)
     result[TARGET] = y
