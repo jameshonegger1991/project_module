@@ -223,7 +223,7 @@ if __name__ == "__main__":
     classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
     regression_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'))
     regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
-    """
+    
     # Build the Rashomon set based on the k-features chosen to train models
     k_chosen = 10
     rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable = rashomon_set_builder(regression_all_results_dic, k_nbr_of_features_chosen= k_chosen, task='regression', rashomon_threshold=0.05)
@@ -266,8 +266,9 @@ if __name__ == "__main__":
 
     final_classification = assess_features_robustness(global_shap_rankings, intra_model_assessment_result, top_k=5)
     save_feature_robustness_assessment(final_classification)
+    
     """
-
+    # ======= SHAP ANALYSIS - COMPLETE AND CLEAN PIPELINE ========
     global_shap_rankings, shap_values_for_all_models, X_test_k, feature_names_k, number_of_features_chosen_for_model_training = run_complete_shap_analysis_and_classification(
         X_train = X_train_after_var_thresh_reg,
         X_test = X_test_after_var_thresh_reg,
@@ -286,5 +287,7 @@ if __name__ == "__main__":
     print_files("outputs/tables/inter_model_concordance_agreement.txt")
     print_files("outputs/tables/intra_model_stability_assessment.txt")
     print_files("outputs/tables/feature_robustness_assessment.txt")
-    
+
+    # ===============================================================================================
+    """
     

@@ -158,8 +158,8 @@ def inter_model_concordance_assessment(shap_global_rankings_dic, top_k_features_
     for i in range(len(model_names)):
         for j in range(i + 1, len(model_names)):
 
-            df_model_i = shap_global_rankings_dic[model_names[i]]
-            df_model_j = shap_global_rankings_dic[model_names[j]]
+            df_model_i = shap_global_rankings_dic[model_names[i]].sort_values(by='SHAP_Ranking')
+            df_model_j = shap_global_rankings_dic[model_names[j]].sort_values(by='SHAP_Ranking')
 
             df_merged = pd.merge(df_model_i[['Feature','SHAP_Ranking']], df_model_j[['Feature','SHAP_Ranking']], on='Feature', suffixes=(f'_{model_names[i]}', f'_{model_names[j]}'))
             kendall_coeff, kendall_p_value = kendalltau(df_merged[f'SHAP_Ranking_{model_names[i]}'], df_merged[f'SHAP_Ranking_{model_names[j]}'])
