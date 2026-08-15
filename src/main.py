@@ -25,15 +25,21 @@ from src.feature_selection import (
 )
 
 from src.tables import (
-    display_correlations_between_features,
-    display_correlations_with_target,
-    display_detailed_results_by_k,
-    display_results,
-    display_summary,
-    display_global_shap_rankings,
-    generate_missing_values_report,
-    get_descriptive_statistics,
+    save_correlations_between_features,
+    save_correlations_with_target,
+    save_detailed_results_by_k,
+    save_rashomon_set,
+    save_results,
+    save_summary,
+    save_global_shap_rankings,
+    save_missing_values_report,
+    save_descriptive_statistics,
+    save_inter_model_concordance_agreement,
+    save_feature_agreement_stats,
+    save_feature_robustness_assessment,
+    save_intra_model_stability_assessment,
 )
+
 from src.visualisations import (
     barplot_global_shap_rankings,
     display_barplots,
@@ -59,9 +65,9 @@ from src.SHAP_analysis import (
     assess_features_robustness,
 )
 
-
-
-
+from src.utils import (
+    print_files,
+)
 
 
 
@@ -69,7 +75,15 @@ from src.SHAP_analysis import (
 if __name__ == "__main__":
 
     # 1. ========== LOAD / BUILD DATASET ==========
-    df_raw = reduced_swiss_dataset()
+    # Run the following only if you want to build the dataset from scratch
+    # df_raw = reduced_swiss_dataset()
+    df_raw = "dataset/swiss_reduced_dataset.csv"
+
+    if not os.path.exists(df_raw):
+        # build the reduced swiss dataset from PISA 2022 dataset (requires manual download)
+        df_raw = reduced_swiss_dataset()
+    else:
+        df_raw = pd.read_csv(df_raw)
 
     (X_train_imputed, X_test_imputed, X_train, X_test, y_train, y_test, df_raw_with_correct_features, df_preprocessed, numeric_imputed_feature_names, all_imputed_feature_names, removed_missing_columns) = run_preprocessing_pipeline(df_raw, MISSING_VALUES_THRESHOLD)
 
@@ -103,9 +117,9 @@ if __name__ == "__main__":
         y_train,
     )
 
-    #display_spearman_correlation_matrix(df_train_set_for_eda, "SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION)")
-    #display_correlations_with_target(df_train_set_for_eda, "PV1MATH")
-    #display_correlations_between_features(df_train_set_for_eda, "PV1MATH")
+    #save_spearman_correlation_matrix(df_train_set_for_eda, "SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION)")
+    #save_correlations_with_target(df_train_set_for_eda, "PV1MATH")
+    #save_correlations_between_features(df_train_set_for_eda, "PV1MATH")
     
     # 4. ========== FEATURE SELECTION ==========
     """
@@ -147,8 +161,8 @@ if __name__ == "__main__":
     regression_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'))
     regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
 
-    display_detailed_results_by_k(regression_all_results_dic)
-    display_summary(regression_results_df, task='regression')
+    save_detailed_results_by_k(regression_all_results_dic)
+    save_summary(regression_results_df, task='regression')
 
     plot_multiple_metrics_vs_features(regression_results_df, task='regression')
     plot_residuals_from_all_results(regression_all_results_dic, k_chosen=10)
@@ -185,8 +199,8 @@ if __name__ == "__main__":
     classification_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'classification_results_by_k.csv'))
     classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
 
-    display_detailed_results_by_k(classification_all_results_dic)
-    display_summary(classification_results_df, task='classification')
+    save_detailed_results_by_k(classification_all_results_dic)
+    save_summary(classification_results_df, task='classification')
 
     plot_multiple_metrics_vs_features(classification_results_df, task='classification')
     plot_confusion_matrices_all_models(classification_all_results_dic, k_chosen=10, class_labels=CLASS_LABELS)
@@ -210,8 +224,9 @@ if __name__ == "__main__":
 
     # Build the Rashomon set based on the k-features chosen to train models
     k_chosen = 10
-    rashomon_set = rashomon_set_builder(regression_all_results_dic, k_nbr_of_features_chosen= k_chosen, task='regression', rashomon_threshold=0.05)
-
+    rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable = rashomon_set_builder(regression_all_results_dic, k_nbr_of_features_chosen= k_chosen, task='regression', rashomon_threshold=0.05)
+    save_rashomon_set(rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable, task='regression', k_nbr_of_features_chosen= k_chosen, rashomon_threshold=0.05)
+    
     # Create X_train/X_test for the related k-features selected
     indices_k = regression_all_results_dic[k_chosen]['indices']
     feature_names_k = regression_all_results_dic[k_chosen]['features']
@@ -232,16 +247,20 @@ if __name__ == "__main__":
     global_shap_rankings = cached_shap_data["rankings"]
     shap_values_for_all_models = cached_shap_data["shap_values"]
 
-    display_global_shap_rankings(global_shap_rankings, k_chosen)
+    save_global_shap_rankings(global_shap_rankings, k_chosen)
+    #print_files("outputs/tables/global_shap_rankings.txt")
+
     barplot_global_shap_rankings(global_shap_rankings, k_chosen)
     shap_summary_plot(shap_values_for_all_models, X_test_k, feature_names_k)
+
     inter_model_concordance_df = inter_model_concordance_assessment(global_shap_rankings, top_k_features_concordance=5)
-    print(inter_model_concordance_df)
+    save_inter_model_concordance_agreement(inter_model_concordance_df)
+
     feature_agreement_stats_df = feature_agreement_stats(global_shap_rankings)
-    print(feature_agreement_stats_df)
-    print()
+    save_feature_agreement_stats(feature_agreement_stats_df)
+
     intra_model_assessment_result = intra_model_stability_assessment(shap_values_for_all_models, feature_names_k)
-    print(intra_model_assessment_result)
-    print()
+    save_intra_model_stability_assessment(intra_model_assessment_result)
+
     final_classification = assess_features_robustness(global_shap_rankings, intra_model_assessment_result, top_k=5)
-    print(final_classification)
+    save_feature_robustness_assessment(final_classification)

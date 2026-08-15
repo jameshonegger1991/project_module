@@ -130,7 +130,7 @@ def reduced_swiss_dataset()-> pd.DataFrame:
     
     # Load the merged dataset
     df = pd.read_csv(file_path)
-    print(f"Original shape: {df.shape}")
+    #print(f"DEBUG: Original shape: {df.shape}")
     
     important_columns = [
         'PV1MATH',         # Mathematics performance score (first plausible value. Target)
@@ -162,13 +162,13 @@ def reduced_swiss_dataset()-> pd.DataFrame:
     
     if existing_columns:
         df_reduced = df[existing_columns].copy()
-        print(f"Reduced shape: {df_reduced.shape} ({len(existing_columns)} columns)")
-        print(f"Columns kept: {existing_columns}")
+        #print(f"DEBUG: Reduced shape: {df_reduced.shape} ({len(existing_columns)} columns)")
+        #print(f"DEBUG: Columns kept: {existing_columns}")
     else:
         print("No important columns found, returning full dataset")
         df_reduced = df
     
-    print(df_reduced.head())
+    #print(f"DEBUG: Reduced shape: {df_reduced.head()}")
 
     print(f"Saving reduced swiss dataset in the src directory...")
     os.makedirs(DATASET_DIR, exist_ok=True)

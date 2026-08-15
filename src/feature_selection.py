@@ -14,12 +14,12 @@ from src.config import (
     VARIANCE_THRESHOLD,
 )
 from src.tables import (
-    display_variance_threshold,
-    display_mutual_info,
-    display_anova,
-    display_rfe,
-    display_summarised_feature_rankings,
-    display_top_features,
+    save_variance_threshold,
+    save_mutual_info,
+    save_anova,
+    save_rfe,
+    save_summarised_feature_rankings,
+    save_top_features,
 )
 
 def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESHOLD):
@@ -160,25 +160,25 @@ def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_
     Run the complete feature selection pipeline.
     """
     variance_threshold_df, selected_columns_var_thresh, threshold = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
-    display_variance_threshold(variance_threshold_df, threshold, selected_columns_var_thresh, feature_names)
+    save_variance_threshold(variance_threshold_df, threshold, selected_columns_var_thresh, feature_names)
 
     selected_indices = [feature_names.index(col) for col in selected_columns_var_thresh]
     X_train_after_var_thresh = X_train[:, selected_indices]
     X_test_after_var_thresh = X_test[:, selected_indices]
     
     ranking_MI_df = apply_mutual_info(X_train_after_var_thresh, y_train, selected_columns_var_thresh, task = task)
-    display_mutual_info(ranking_MI_df, task, X_train_after_var_thresh)
+    save_mutual_info(ranking_MI_df, task, X_train_after_var_thresh)
 
     ranking_anova_df = apply_ANOVA(X_train_after_var_thresh, y_train, selected_columns_var_thresh, task = task)
-    display_anova(ranking_anova_df, task, X_train_after_var_thresh)
+    save_anova(ranking_anova_df, task, X_train_after_var_thresh)
 
     ranking_rfe_df= apply_rfe(X_train_after_var_thresh, y_train, selected_columns_var_thresh, task = task, step=1)
-    display_rfe(ranking_rfe_df, task, X_train_after_var_thresh)
+    save_rfe(ranking_rfe_df, task, X_train_after_var_thresh)
 
     final_features_ranking, method_names = summarise_feature_rankings([ranking_MI_df, ranking_anova_df, ranking_rfe_df], ["Mutual Information", "ANOVA", "RFE"])
-    display_summarised_feature_rankings(final_features_ranking, method_names)
+    save_summarised_feature_rankings(final_features_ranking, method_names)
 
     #top_features, k = select_top_features(final_features_ranking, 10)
-    #display_top_features(top_features, k)
+    #save_top_features(top_features, k)
 
     return final_features_ranking, variance_threshold_df, ranking_MI_df, ranking_anova_df, ranking_rfe_df, X_train_after_var_thresh, X_test_after_var_thresh, selected_columns_var_thresh

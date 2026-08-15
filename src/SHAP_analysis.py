@@ -51,22 +51,7 @@ def rashomon_set_builder(model_training_all_results_dic, k_nbr_of_features_chose
         if score >= lowest_score_acceptable:
             rashomon_set_dict[model_name] = results_k[model_name]
 
-    metric_label = "best R² CV score" if task == 'regression' else "best F1 macro CV score"
-    
-    print(f"\n{'='*60}")
-    print(f"RASHOMON SET CONSTRUCTION (k={k_nbr_of_features_chosen}, Task={task})")
-    print(f"{'='*60}")
-    print(f"\nBest CV Score achieved : {best_score:.4f}")
-    print(f"Acceptable threshold   : >= {lowest_score_acceptable:.4f} (Δ <= {rashomon_threshold})")
-    print(f"\nRashomon set contains the following models:")
-    print()
-    for model_name, res_dict in rashomon_set_dict.items():
-        score = res_dict.get('best_cv_score')
-        print(f"  • {model_name:<10} : {metric_label} = {score:.4f}")
-        
-    print(f"\n{'='*60}\n")
-
-    return rashomon_set_dict
+    return rashomon_set_dict, best_score, lowest_score_acceptable
 
 def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, feature_names, task='regression'):
     """
@@ -219,11 +204,15 @@ def feature_agreement_stats(shap_global_rankings_dic):
     results_df = pd.DataFrame(results)
     results_df = results_df.pivot(index='Feature', columns='Model', values='SHAP_Ranking')
     results_df = results_df.reset_index().rename_axis(columns=None)
+
     results_df = results_df.rename(columns={model: f"{model} SHAP RANKING" for model in model_names})
 
     shap_columns = [f"{model} SHAP RANKING" for model in model_names]
+    
     results_df['Mean SHAP rank'] = results_df[shap_columns].mean(axis=1)
+
     results_df['Standard deviation SHAP rank'] = results_df[shap_columns].std(axis=1)
+
     results_df = results_df.sort_values(by='Mean SHAP rank', ascending=True)
 
     return results_df

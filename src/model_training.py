@@ -13,7 +13,7 @@ from sklearn.svm import SVC, SVR
 from src.feature_selection import select_top_features
 from sklearn.utils.class_weight import compute_sample_weight
 
-from src.tables import display_results
+from src.tables import save_results
 
 
 def run_models(X_train, y_train, X_test, y_test, model_names, task):
