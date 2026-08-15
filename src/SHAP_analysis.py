@@ -3,6 +3,8 @@ import pandas as pd
 import shap
 from scipy.stats import kendalltau, spearmanr
 
+from src.tables import save_feature_agreement_stats, save_feature_robustness_assessment, save_global_shap_rankings, save_inter_model_concordance_agreement, save_intra_model_stability_assessment, save_rashomon_set
+
 def rashomon_set_builder(model_training_all_results_dic, k_nbr_of_features_chosen, task: str = 'regression', rashomon_threshold: float = 0.05):
     """
     Constructs a Rashomon set from the model training all_results dictionary for a given k.
@@ -86,6 +88,7 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
                 scaler = best_estimator.named_steps.get('scaler', None)
                 X_train_for_shap = scaler.transform(X_train) if scaler else X_train
                 X_test_for_shap = scaler.transform(X_test) if scaler else X_test
+                np.random.seed(7)
                 explainer = shap.LinearExplainer(best_estimator.named_steps['model'], X_train_for_shap, feature_perturbation="correlation_dependent") # helps keeping realism in profile computation by computing "smart" conditional expectations. SOURCE: https://shap.readthedocs.io/en/latest/example_notebooks/tabular_examples/linear_models/Math%20behind%20LinearExplainer%20with%20correlation%20feature%20perturbation.html 
                 shap_values = explainer.shap_values(X_test_for_shap)
 
@@ -105,7 +108,7 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
                         X_test_sample = X_test.sample(n=max_samples, random_state=7)
 
                     else:
-                        indices = np.random.choice(X_test.shape[0], size=max_samples, replace=False)
+                        indices = np.random.RandomState(7).choice(X_test.shape[0], size=max_samples, replace=False)
                         X_test_sample = X_test[indices]
                 else:
                     X_test_sample = X_test
@@ -114,6 +117,7 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
                 X_train_for_shap= scaler.transform(X_train) if scaler else X_train
                 X_test_for_shap = scaler.transform(X_test_sample) if scaler else X_test_sample
 
+                np.random.seed(7)
                 background_sample = shap.kmeans(X_train_for_shap, 50)
                 explainer = shap.KernelExplainer(best_estimator.named_steps['model'].predict, background_sample)
                 shap_values = explainer.shap_values(X_test_for_shap)
@@ -217,7 +221,7 @@ def feature_agreement_stats(shap_global_rankings_dic):
 
     return results_df
 
-def intra_model_stability_assessment(local_shap_dict, feature_names, n_iterations=500):
+def intra_model_stability_assessment(local_shap_dict, feature_names, n_iterations=500, random_seed=7):
     """
     Assesses the intra-model stability of feature importance using bootstrapping with replacement on local SHAP values.
 
@@ -235,7 +239,7 @@ def intra_model_stability_assessment(local_shap_dict, feature_names, n_iteration
 
     # Reuse local SHAP values to avoid recomputing SHAP for every bootstrap
     bootstrap_results = {}
-
+    np.random.seed(random_seed)
     
     for model_name in local_shap_dict:
         print(f"DEBUG: Model treatment: {model_name}")
@@ -367,7 +371,7 @@ def assess_features_robustness(global_rankings_dict, intra_model_assessment_resu
             'Mean Absolute SHAP': mean_shap,
             'Mean CV': mean_cv,
             'CV stable': 'Yes' if stable else 'No',
-            'In Top-K intersection': 'Yes' if in_top_k else 'No',
+            f"In Top-{top_k} intersection": 'Yes' if in_top_k else 'No',
             'Retained': 'Yes' if retained else 'No'
         })
 
@@ -382,6 +386,53 @@ def assess_features_robustness(global_rankings_dict, intra_model_assessment_resu
     
     return final_classifications_df
 
+def run_complete_shap_analysis_and_classification(
+        X_train,
+        X_test,
+        number_of_features_chosen_for_model_training,
+        task,
+        all_training_model_results_dic,
+        rashomon_set_threshold,
+        number_of_features_retained_for_final_classification,
+        ):
+
+    print(f"The Rashomon set is built...")
+    rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable = rashomon_set_builder(all_training_model_results_dic, number_of_features_chosen_for_model_training, task, rashomon_set_threshold)
+    save_rashomon_set(rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable, task, number_of_features_chosen_for_model_training, rashomon_set_threshold)
+    print(f"The Rashomon set is saved to the 'outputs/tables' directory.")
+
+    # Create X_train/X_test for the related k-features selected
+    indices_k = all_training_model_results_dic[number_of_features_chosen_for_model_training]['indices']
+    feature_names_k = all_training_model_results_dic[number_of_features_chosen_for_model_training]['features']
+    X_train_k = X_train[:, indices_k]
+    X_test_k = X_test[:, indices_k]
+
+    print(f"Global and local SHAP values are computed...")
+    global_shap_rankings, shap_values_for_all_models = local_and_global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
+    save_global_shap_rankings(global_shap_rankings, number_of_features_chosen_for_model_training)
+    print(f"Global shap rankings are saved to the 'outputs/tables' directory.")
+
+    print(f"Feature agreement statistics are computed...")
+    feature_agreement_stats_df = feature_agreement_stats(global_shap_rankings)
+    save_feature_agreement_stats(feature_agreement_stats_df)
+    print(f"Feature agreement statistics are saved to the 'outputs/tables' directory.")
+
+    print(f"Intra-model stability assessment is computed...")
+    intra_model_assessment_result = intra_model_stability_assessment(shap_values_for_all_models, feature_names_k)
+    save_intra_model_stability_assessment(intra_model_assessment_result)
+    print(f"Intra-model stability assessment is saved to the 'outputs/tables' directory.")
+
+    print(f"Inter-model concordance assessment is computed...")
+    inter_model_concordance_df = inter_model_concordance_assessment(global_shap_rankings, number_of_features_retained_for_final_classification)
+    save_inter_model_concordance_agreement(inter_model_concordance_df)
+    print(f"Inter-model concordance assessment is saved to the 'outputs/tables' directory.")
+
+    print(f"Feature robustness assessment is computed...")
+    final_classification = assess_features_robustness(global_shap_rankings, intra_model_assessment_result, number_of_features_retained_for_final_classification)
+    save_feature_robustness_assessment(final_classification)
+    print(f"Feature robustness assessment is saved to the 'outputs/tables' directory.")
+
+    return global_shap_rankings, shap_values_for_all_models, X_test_k, feature_names_k, number_of_features_chosen_for_model_training
 
     
 

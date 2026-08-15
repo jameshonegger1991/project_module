@@ -63,6 +63,7 @@ from src.SHAP_analysis import (
     feature_agreement_stats,
     intra_model_stability_assessment,
     assess_features_robustness,
+    run_complete_shap_analysis_and_classification,
 )
 
 from src.utils import (
@@ -75,6 +76,7 @@ from src.utils import (
 if __name__ == "__main__":
 
     # 1. ========== LOAD / BUILD DATASET ==========
+    
     # Run the following only if you want to build the dataset from scratch
     # df_raw = reduced_swiss_dataset()
     df_raw = "dataset/swiss_reduced_dataset.csv"
@@ -215,13 +217,13 @@ if __name__ == "__main__":
     """
 
     # 6. ========= EXPLAINABILITY ===========
-
+    
     # RASHOMON SET BUILDER
     classification_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'classification_results_by_k.csv'))
     classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
     regression_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'))
     regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
-
+    """
     # Build the Rashomon set based on the k-features chosen to train models
     k_chosen = 10
     rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable = rashomon_set_builder(regression_all_results_dic, k_nbr_of_features_chosen= k_chosen, task='regression', rashomon_threshold=0.05)
@@ -236,13 +238,13 @@ if __name__ == "__main__":
     # Compute global shap values
     shap_cache_path = os.path.join(SAVEDFILES_DIR, 'shap_results_cache.joblib')
 
-    """
+    #To disable when launched
     global_shap_rankings, shap_values_for_all_models = local_and_global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
     joblib.dump({
             "rankings": global_shap_rankings,
             "shap_values": shap_values_for_all_models
         }, shap_cache_path)
-    """
+    
     cached_shap_data = joblib.load(shap_cache_path)
     global_shap_rankings = cached_shap_data["rankings"]
     shap_values_for_all_models = cached_shap_data["shap_values"]
@@ -264,3 +266,25 @@ if __name__ == "__main__":
 
     final_classification = assess_features_robustness(global_shap_rankings, intra_model_assessment_result, top_k=5)
     save_feature_robustness_assessment(final_classification)
+    """
+
+    global_shap_rankings, shap_values_for_all_models, X_test_k, feature_names_k, number_of_features_chosen_for_model_training = run_complete_shap_analysis_and_classification(
+        X_train = X_train_after_var_thresh_reg,
+        X_test = X_test_after_var_thresh_reg,
+        number_of_features_chosen_for_model_training = 10,
+        task ='regression',
+        all_training_model_results_dic = regression_all_results_dic,
+        rashomon_set_threshold = 0.05,
+        number_of_features_retained_for_final_classification = 5,
+        )
+
+    print_files("outputs/tables/rashomon_set.txt")
+    print_files("outputs/tables/global_shap_rankings.txt")
+    barplot_global_shap_rankings(global_shap_rankings, number_of_features_chosen_for_model_training)
+    shap_summary_plot(shap_values_for_all_models, X_test_k, feature_names_k)
+    print_files("outputs/tables/feature_agreement_stats.txt")
+    print_files("outputs/tables/inter_model_concordance_agreement.txt")
+    print_files("outputs/tables/intra_model_stability_assessment.txt")
+    print_files("outputs/tables/feature_robustness_assessment.txt")
+    
+    
