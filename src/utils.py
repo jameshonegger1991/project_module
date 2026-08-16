@@ -1,3 +1,5 @@
+from IPython.display import Image, display
+import os
 
 def print_files(file_path: str):
     with open(file_path, 'r') as file:
@@ -49,3 +51,15 @@ def check_overfitting_classification(train_f1, cv_f1):
         detail = f"F1 Macro Gap (Train - CV) = {gap:.4f}"
     
     return status, detail, gap
+
+def display_visualisation(path):
+    """
+    Display saved plot (png format) from the specified file path.
+    """
+    if not os.path.isfile(path):
+        print(f"File not found: {path}")
+        return
+    
+    display(Image(filename=path))
+
+

@@ -208,15 +208,10 @@ def feature_agreement_stats(shap_global_rankings_dic):
     results_df = pd.DataFrame(results)
     results_df = results_df.pivot(index='Feature', columns='Model', values='SHAP_Ranking')
     results_df = results_df.reset_index().rename_axis(columns=None)
-
     results_df = results_df.rename(columns={model: f"{model} SHAP RANKING" for model in model_names})
-
     shap_columns = [f"{model} SHAP RANKING" for model in model_names]
-    
     results_df['Mean SHAP rank'] = results_df[shap_columns].mean(axis=1)
-
     results_df['Standard deviation SHAP rank'] = results_df[shap_columns].std(axis=1)
-
     results_df = results_df.sort_values(by='Mean SHAP rank', ascending=True)
 
     return results_df

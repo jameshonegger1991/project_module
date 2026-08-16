@@ -33,13 +33,21 @@ def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESH
     selector = VarianceThreshold(threshold=threshold)
     selector.fit(X_train)
 
+    # ================ DEBUG ===================================
+    #actual_variances = np.var(X_train, axis=0)
+    #comparison_df = pd.DataFrame({"Feature": feature_names, "Selector variance": selector.variances_, "Actual variance": actual_variances})
+    #comparison_df["Difference"] = (comparison_df["Selector variance"]- comparison_df["Actual variance"])
+    #comparison_df["Same"] = np.isclose(comparison_df["Selector variance"],comparison_df["Actual variance"])
+    #print(comparison_df.to_string(index=False))
+    # ==========================================================
+
     selected_indices = selector.get_support(indices=True)
 
     selected_cols = [feature_names[i] for i in selected_indices]
     
     report_df = pd.DataFrame({
         'Feature': feature_names,
-        'Variance': selector.variances_,
+        'Variance': np.var(X_train, axis=0), # np.var() is preferred over selector.variances_ as it does not internally adjust variance value when threshold = 0 (uncomment the DEBUG section above to see the comparison).
         'Status': ['KEPT' if selector.get_support()[i] else 'REMOVED' for i in range(len(feature_names))]
         }).sort_values('Variance', ascending = False
                        ).reset_index(drop=True)
@@ -176,7 +184,7 @@ def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_
     save_rfe(ranking_rfe_df, task, X_train_after_var_thresh)
 
     final_features_ranking, method_names = summarise_feature_rankings([ranking_MI_df, ranking_anova_df, ranking_rfe_df], ["Mutual Information", "ANOVA", "RFE"])
-    save_summarised_feature_rankings(final_features_ranking, method_names)
+    save_summarised_feature_rankings(final_features_ranking, method_names, task)
 
     #top_features, k = select_top_features(final_features_ranking, 10)
     #save_top_features(top_features, k)

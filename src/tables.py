@@ -28,7 +28,8 @@ def save_missing_values_report(df, threshold, title):
     median_missing_pct = rows_with_missing.median() if len(rows_with_missing) > 0 else 0
     rows_with_missing_count = len(rows_with_missing)
 
-    save_file = open(f"outputs/tables/{title}.txt", "w")
+    file_path = f"outputs/tables/{title}.txt"
+    save_file = open(file_path, "w")
     print(file = save_file)
     print("=" * 80, file = save_file)
     print(f"{title}", file = save_file)
@@ -64,13 +65,15 @@ def save_missing_values_report(df, threshold, title):
     print(f"Overall missing %: {(total_missing / total_cells) * 100:.1f}%", file = save_file)
     print("=" * 80 + "\n", file = save_file)
     save_file.close()
+    print(f"{title}.txt saved to {file_path}")
 
 def save_descriptive_statistics(df, title):
     """
     Display descriptive statistics for a DataFrame.
     It includes shape, descriptive stats, head, info, and skewness.
     """
-    save_file = open(f"outputs/tables/{title}.txt", "w")
+    file_path = f"outputs/tables/{title}.txt"
+    save_file = open(file_path, "w")
     
     print("=" * 80, file = save_file)
     print(title, file = save_file)
@@ -121,6 +124,7 @@ def save_descriptive_statistics(df, title):
     
     print("=" * 80 + "\n", file = save_file)
     save_file.close()
+    print(f"{title}.txt saved to {file_path}")
 
 def save_correlations_with_target(df, target = "PV1MATH"):
     """
@@ -149,7 +153,8 @@ def save_correlations_with_target(df, target = "PV1MATH"):
 
     negative_correlations.index.name = "Feature"
 
-    save_file = open(f"outputs/tables/correlations_with_{target}.txt", "w")
+    file_path = f"outputs/tables/correlations_with_{target}.txt"
+    save_file = open(file_path, "w")
     print("\n" + "=" * 80,file = save_file)
     print("CORRELATIONS WITH TARGET",file = save_file)
     print("=" * 80,file = save_file)
@@ -159,11 +164,12 @@ def save_correlations_with_target(df, target = "PV1MATH"):
     print(f"\nNEGATIVE CORRELATIONS WITH {target}", file = save_file)
     print(negative_correlations, file = save_file)
     save_file.close()
+    print(f"correlations_with_{target}.txt saved to {file_path}")
 
-def save_correlations_between_features(df, target = "PV1MATH", corr_threshold = 0.70):
+def save_correlations_among_features(df, target = "PV1MATH", corr_threshold = 0.70):
     """
     Displays the 20 strongest positive and negative Spearman correlations
-    between features, excluding the target variable.
+    among features, excluding the target variable.
 
     It also displays feature pairs whose absolute correlation exceeds
     the specified threshold, indicating a potential risk of multicollinearity.
@@ -218,7 +224,8 @@ def save_correlations_between_features(df, target = "PV1MATH", corr_threshold = 
         .reset_index(drop=True)
     )
 
-    save_file = open(f"outputs/tables/correlations_between_features.txt", "w")
+    file_path = f"outputs/tables/correlations_among_features.txt"
+    save_file = open(file_path, "w")
     print("\n" + "=" * 80, file = save_file)
     print("CORRELATIONS BETWEEN FEATURES", file = save_file)
     print("=" * 80, file = save_file)
@@ -236,6 +243,7 @@ def save_correlations_between_features(df, target = "PV1MATH", corr_threshold = 
     else:
         print(multicollinearity_risk, file = save_file)
     save_file.close()
+    print(f"correlations_among_features.txt saved to {file_path}")
 
 # ==== FEATURE SELECTION ==== 
 
@@ -248,6 +256,7 @@ def save_variance_threshold(ranking_VThresh: pd.DataFrame, threshold = VARIANCE_
     print(ranking_VThresh.to_string(index=False), file = save_file)
     print(file = save_file)
     save_file.close()
+    print("variance_threshold_ranking.txt saved to outputs/tables")
 
 def save_mutual_info(ranking_MI: pd.DataFrame, task, X_train):
 
@@ -260,6 +269,7 @@ def save_mutual_info(ranking_MI: pd.DataFrame, task, X_train):
     print(ranking_MI.to_string(index=False), file = save_file)
     print(file = save_file)
     save_file.close()
+    print(f"{task}_mutual_info_ranking.txt saved to outputs/tables")
     
 def save_anova(ranking_anova: pd.DataFrame, task, X_train):
 
@@ -270,6 +280,7 @@ def save_anova(ranking_anova: pd.DataFrame, task, X_train):
     print("\n ANOVA Ranking (1 = best F-score) :", file = save_file)
     print(ranking_anova.to_string(index = False), file = save_file)
     save_file.close()
+    print(f"{task}_anova_ranking.txt saved to outputs/tables")
 
 def save_rfe(ranking_rfe: pd.DataFrame, task, X_train):
 
@@ -280,10 +291,11 @@ def save_rfe(ranking_rfe: pd.DataFrame, task, X_train):
     print("\n RFE Ranking (1 = best) :", file = save_file)
     print(ranking_rfe.to_string(index=False), file = save_file)
     save_file.close()
+    print(f"{task}_rfe_ranking.txt saved to outputs/tables")
 
-def save_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_names = None):
+def save_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_names = None, task = 'regression'):
 
-    save_file = open(f"outputs/tables/summarised_feature_rankings.txt", "w")
+    save_file = open(f"outputs/tables/{task}_combined_feature_selection_rankings.txt", "w")
     print("\n" + "=" * 80, file = save_file)
     print("COMBINED FINAL RANKING", file = save_file)
     print("=" * 80, file = save_file)
@@ -292,44 +304,55 @@ def save_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_nam
     print("\n Final Ranking:", file = save_file)
     print(combined_rankings.to_string(index=False), file = save_file)
     save_file.close()
+    print(f"{task}_combined_feature_selection_rankings.txt saved to outputs/tables")
     
-def save_top_features(top_features: list, k):
+def save_top_features(top_features: list, k, save_file=None, task = 'regression'):
 
-    save_file = open(f"outputs/tables/top_{k}_features_selected.txt", "w")
+    own_file = save_file is None
+
+    if own_file:
+        save_file = open(f"outputs/tables/{task}_top_{k}_features_selected.txt", "w")
+
     print("\n" + "=" * 80, file = save_file)
-    print(f"TOP {k} FEATURES SELECTED", file = save_file)
+    print(f"TOP {k} FEATURES SELECTED FOR {task.upper()} TASK", file=save_file)
     print("=" * 80, file = save_file)
     print(file = save_file)
+
     for i, feature in enumerate(top_features, 1):
-        print(f"  {i}. {feature}")
-    save_file.close()
+        print(f"  {i}. {feature}", file=save_file)
+
+    if own_file:
+        save_file.close()
 
 
 # ==== MODEL TRAINING ====
 
-def save_results(results, model_names=None):
+def save_results(results, model_names=None, top_k=10, save_file = None):
     """
-    Display results for all models in the results dictionary.
+    Save results for all models in the results dictionary.
     """
     if model_names is None:
         model_names = list(results.keys())
-    
+
     for name in model_names:
         if name not in results:
             print(f"Model '{name}' not found in results.")
             continue
-        
+
         result = results[name]
-        
+
         if result['type'] == 'regression':
-            display_regression_result(name, result)
+            save_regression_result(name, result, top_k, save_file)
         else:
-            display_classification_result(name, result)
+            save_classification_result(name, result, top_k, save_file)
 
-def save_regression_result(name, result):
-    """Internal function to display a single regression result."""
+def save_regression_result(name, result, top_k, save_file = None):
+    """Internal function to save a single regression result."""
 
-    save_file = open(f"outputs/tables/{name}_regression_results.txt", "w")
+    own_file = save_file is None
+    if own_file:
+        save_file = open(f"outputs/tables/{name}_regression_results_{top_k}_features.txt","w")
+
     print("=" * 50, file = save_file)
     print(f"{name} (REGRESSION) - RESULTS", file = save_file)
     print("=" * 50, file = save_file)
@@ -352,11 +375,20 @@ def save_regression_result(name, result):
     cv_score = result.get('best_cv_score', result['test_r2'])
     status, detail, _ = check_overfitting_regression(result['train_r2'], cv_score)
     print(f"\n{status}: {detail}", file = save_file)
-    save_file.close()
+    print(file = save_file)
 
-def save_classification_result(name, result):
-    """Internal function to display a single classification result."""
-    save_file = open(f"outputs/tables/{name}_classification_result.txt", "w")
+    if own_file:
+        save_file.close()
+        print(f"{name}_regression_results_{top_k}_features.txt saved to outputs/tables")
+
+def save_classification_result(name, result, top_k, save_file = None):
+    """Internal function to save a single classification result."""
+
+    own_file = save_file is None
+
+    if own_file:
+        save_file = open(f"outputs/tables/{name}_classifications_result_{top_k}_features.txt","w")
+
     print("=" * 50, file = save_file)
     print(f"{name} (CLASSIFICATION) - RESULTS", file = save_file)
     print("=" * 50, file = save_file)
@@ -379,34 +411,41 @@ def save_classification_result(name, result):
     status, detail, _ = check_overfitting_classification(result['train_f1_macro'], result['best_cv_score'])
     print(f"\n{status}: {detail}", file = save_file)
     print(file = save_file)
-    save_file.close()
 
-def save_detailed_results_by_k(all_results, k_values=None):
+    if own_file:
+        save_file.close()
+        print(f"{name}_classification_results_{top_k}_features.txt saved to outputs/tables")
+
+def save_detailed_results_by_k(all_results, task='regression', k_values=None):
     """
-    Display detailed results for each k.
+    Save detailed results for each k in a single text file.
     """
-    save_file = open('outputs/tables/detailed_results_by_k.txt', 'w')
+
+    save_file = open(f"outputs/tables/{task}_detailed_results_by_k.txt","w")
+
     if k_values is None:
         k_values = sorted(all_results.keys())
-    
+
     for k in k_values:
-        print(f"\n{'#'*60}", file = save_file)
-        print(f"# DETAILED RESULTS FOR K = {k} FEATURES", file = save_file)
-        print(f"{'#'*60}", file = save_file)
-        
+
+        print(f"\n{'#' * 60}", file=save_file)
+        print(f"# DETAILED RESULTS FOR K = {k} FEATURES", file=save_file)
+        print(f"{'#' * 60}", file=save_file)
+
         features = all_results[k]['features']
-        display_top_features(features, k)
-        
+        save_top_features(features, k, save_file=save_file, task=task)
+
         results_k = all_results[k]['results']
-        display_results(results_k)
+        save_results(results_k, top_k=k, save_file=save_file)
 
     save_file.close()
+    print(f"{task}_detailed_results_by_k.txt saved to outputs/tables")
 
-def save_summary(results_df, task):
+def save_summary_of_metrics(results_df, task):
     """
-    Display summary of metrics from results_df.
+    Saves a summary of metrics from results_df.
     """
-    save_file = open('outputs/tables/metrics_summary.txt', 'w')
+    save_file = open(f"outputs/tables/{task}_summary_of_metrics.txt", "w")
     print("\n" + "=" * 80, file = save_file)
     print(f"SUMMARY - {task.upper()} METRICS", file = save_file)
     print("=" * 80, file = save_file)
@@ -420,6 +459,10 @@ def save_summary(results_df, task):
         print(results_df[['k', 'Model', 'CV_Score', 'Accuracy_test', 'F1_macro_test', 'Gap_Accuracy']].to_string(index=False), file = save_file)
 
     save_file.close()
+
+    print(f"{task}_summary_of_metrics.txt saved to outputs/tables")
+
+    
 
 ###### SHAP ANALYSIS #####
 

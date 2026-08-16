@@ -14,7 +14,7 @@ from src.config import (
 
 # EDA plots
 
-def export_histograms(df, title = "Histogram"):
+def save_individual_histograms(df, title = "Histogram"):
     """
     Save histograms for all numeric columns to 'plots/univariate_plots/histograms'.
     """
@@ -27,7 +27,7 @@ def export_histograms(df, title = "Histogram"):
         print("No numeric columns found to generate histograms.")
         return
     
-    os.makedirs("plots/univariate_plots/histograms", exist_ok=True)
+    os.makedirs("outputs/plots/univariate_plots/histograms", exist_ok=True)
     
     for col in numeric_cols:
         plt.figure(figsize=(8, 4))
@@ -44,9 +44,9 @@ def export_histograms(df, title = "Histogram"):
         plt.savefig(f"outputs/plots/univariate_plots/histograms/{col}_{title}.png", dpi=150, bbox_inches='tight')
         plt.close()
     
-    print(f"{len(numeric_cols)} histograms saved to plots/univariate_plots/")
+    print(f"{len(numeric_cols)} histograms saved to outputs/plots/univariate_plots/")
 
-def export_violin_plots(df, title = "Violin Plot"):
+def save_individual_violin_plots(df, title = "Violin Plot"):
     """
     Save violin plots for all numeric columns to 'outputs/plots/univariate_plots/violin_plots/'.
     """
@@ -80,7 +80,7 @@ def export_violin_plots(df, title = "Violin Plot"):
     
     print(f"{len(numeric_cols)} violin plots saved to outputs/plots/univariate_plots/violin_plots/")
 
-def export_barplots(df, title = "Bar Plot"):
+def save_individual_barplots(df, title = "Bar Plot"):
     """
     Generate bar plots for all categorical features and save them to 'outputs/plots/univariate_plots/barplots/'.
     """
@@ -93,7 +93,6 @@ def export_barplots(df, title = "Bar Plot"):
         print("No categorical columns found to generate bar plots.")
         return
 
-    
     folder_path = "outputs/plots/univariate_plots/barplots"
     os.makedirs(folder_path, exist_ok=True)
     
@@ -121,9 +120,9 @@ def export_barplots(df, title = "Bar Plot"):
     
     print(f"{len(categorical_cols)} bar plots saved to {folder_path}/")
 
-def display_histograms(df, title = "Histograms for all numeric features"):
+def save_combined_histograms(df, title = "Histograms - All Numeric Features (BEFORE CLEANING AND IMPUTATION)"):
     """
-    Display a grid of histograms for all numeric columns.
+    Save a combined grid of histograms for all numeric columns.
     """ 
     if df.empty:
         print("The DataFrame is empty. Cannot generate histograms.")
@@ -134,7 +133,9 @@ def display_histograms(df, title = "Histograms for all numeric features"):
         print("No numeric columns found to display histograms.")
         return
 
-    
+    folder_path = "outputs/plots/univariate_plots/histograms"
+    os.makedirs(folder_path, exist_ok=True)
+
     axes = df[numeric_cols].hist(figsize=(22, 18), bins=30, xlabelsize=8, ylabelsize=8)
 
     for ax in axes.ravel():
@@ -143,11 +144,13 @@ def display_histograms(df, title = "Histograms for all numeric features"):
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0, 1, 0.96], pad=2.5)
     plt.subplots_adjust(hspace=0.9, wspace=0.4)
-    plt.show()
+    plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"{title}.png saved to {folder_path}/")
 
-def display_violin_plots(df, title = "Violin Plots - All Numeric Features"):
+def save_combined_violin_plots(df, title = "Violin Plots - All Numeric Features (BEFORE CLEANING AND IMPUTATION)"):
     """
-    Displays violin plots for all numeric columns in the DataFrame. 
+    Save a combined grid of violin plots for all numeric columns. 
     Inspiration: https://www.datasciencebyexample.com/2022/05/15/2022-05-15-1/ 
     """
     if df.empty:
@@ -156,8 +159,11 @@ def display_violin_plots(df, title = "Violin Plots - All Numeric Features"):
 
     numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
     if not numeric_cols:
-        print("No numeric columns found to display violin plots.")
+        print("No numeric columns found to generate violin plots.")
         return
+
+    folder_path = "outputs/plots/univariate_plots/violin_plots"
+    os.makedirs(folder_path, exist_ok=True)
 
     n_cols = 4 
 
@@ -188,11 +194,13 @@ def display_violin_plots(df, title = "Violin Plots - All Numeric Features"):
     plt.suptitle(title, fontsize=16) 
     plt.tight_layout(rect=[0, 0, 1, 0.96], pad=2.5) 
     plt.subplots_adjust(hspace=1.0, wspace=0.4)
-    plt.show()
-
-def display_barplots(df, title = "Bar Plots - All Categorical Features"):
+    plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"{title}.png saved to {folder_path}/")
+    
+def save_combined_barplots(df, title = "Bar Plots - All Categorical Features (BEFORE CLEANING AND IMPUTATION)"):
     """
-    Displays bar plots for all categorical columns in the DataFrame.
+    Save a combined grid of bar plots for all categorical columns in the DataFrame.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate bar plots.")
@@ -201,10 +209,14 @@ def display_barplots(df, title = "Bar Plots - All Categorical Features"):
     #This function is based on the same model as "display_violin_plots"
     cat_cols = df.select_dtypes(include=['object']).columns.tolist()
     if not cat_cols:
-        print("No categorical columns found to display bar plots.")
+        print("No categorical columns found to generate bar plots.")
         return
 
     n_cols = 2
+
+    folder_path = "outputs/plots/univariate_plots/barplots"
+    os.makedirs(folder_path, exist_ok=True)
+
     n_rows = (len(cat_cols) + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, n_rows * 4))
     axes = np.asarray(axes).flatten() 
@@ -226,15 +238,20 @@ def display_barplots(df, title = "Bar Plots - All Categorical Features"):
     
     plt.suptitle(title, fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.show()
+    plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"{title}.png saved to {folder_path}/")
 
-def display_spearman_correlation_matrix(df, title = 'Spearman Correlation Matrix'):
+def save_spearman_correlation_matrix(df, title = 'Spearman Correlation Matrix'):
     """
-    Displays the Spearman correlation matrix for all numeric variables.
+    Generates the Spearman correlation matrix for all numeric variables.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate Spearman correlation matrix.")
         return
+
+    folder_path = "outputs/plots/multivariate_plots"
+    os.makedirs(folder_path, exist_ok=True)
 
     spearman_matrix = df.corr(method='spearman')
     corr_asc = spearman_matrix["PV1MATH"].abs().sort_values(ascending=False).index
@@ -262,10 +279,12 @@ def display_spearman_correlation_matrix(df, title = 'Spearman Correlation Matrix
     )
     
     plt.subplots_adjust(left=0.16, bottom=0.18, top=0.92)
-    plt.show()
+    plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"{title}.png saved to {folder_path}/")
 
 # Model evaluation plots
-def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(14, 10)):
+def save_multiple_metrics_vs_features_plot(results_df, task, metrics=None, figsize=(14, 10)):
     """
     Plots multiple metrics into one figure with different subplots that show all models vs. number of features.
     It takes in argument the results_df generated by evaluate_k_values.
@@ -349,11 +368,10 @@ def plot_multiple_metrics_vs_features(results_df, task, metrics=None, figsize=(1
 
     save_path = os.path.join(PLOTS_DIR, f"{task}_metrics_vs_features_plot.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
+    plt.close()
     print(f"Metrics vs features plot saved to: {save_path}")
-    
-    plt.show()
 
-def plot_residuals_from_all_results(all_results_regression, k_chosen, figsize=(14, 10)):
+def save_residuals_plot_from_all_results(all_results_regression, k_chosen, figsize=(14, 10)):
     """
     Plots residual plots for all regression models at the chosen 'k' by using the 'all_results' dictionary generated by evaluate_k_values.
     (Custom wrapper designed for pipeline consistency over sklearn's PredictionErrorDisplay).
@@ -392,12 +410,12 @@ def plot_residuals_from_all_results(all_results_regression, k_chosen, figsize=(1
     fig.suptitle(f"Residual Analysis for top {k_chosen} features", fontsize=16)
     plt.tight_layout(h_pad=2.5) 
 
-    save_path = os.path.join(PLOTS_DIR, f"residual_plots_for_{k_chosen}_features.png")
+    save_path = os.path.join(PLOTS_DIR, f"regression_residual_plots_for_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
-    print(f"residual plots for {k_chosen} features saved to: {save_path}")
-    plt.show()
+    plt.close()
+    print(f"regression_residual plots for {k_chosen} features saved to: {save_path}")
     
-def plot_confusion_matrices_all_models(all_results_classification, k_chosen, class_labels, figsize=(14, 10)):
+def save_confusion_matrices_plot_all_models(all_results_classification, k_chosen, class_labels, figsize=(14, 10)):
     """
     plot confusion matrices for all classification models built with k-top features.
     (Custom wrapper designed for ensuring pipeline consistency and custom metadata injection over sklearn's ConfusionMatrixDisplay).
@@ -458,11 +476,10 @@ def plot_confusion_matrices_all_models(all_results_classification, k_chosen, cla
     
     save_path = os.path.join(PLOTS_DIR, f"confusion_matrices_top_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
     print(f"Confusion matrices saved to: {save_path}")
 
-    plt.show()
-
-def plot_learning_curves_all_models(all_results, k_chosen, X_train_after_var_thresh, y_train, task='classification', figsize=(14, 10)):
+def save_learning_curves_plot_all_models(all_results, k_chosen, X_train_after_var_thresh, y_train, task='regression', figsize=(14, 10)):
     """
     plot learning curves for all models built with k-top features.
     REFERENCE: https://scikit-learn.org/stable/auto_examples/model_selection/plot_learning_curve.html 
@@ -531,9 +548,8 @@ def plot_learning_curves_all_models(all_results, k_chosen, X_train_after_var_thr
     os.makedirs(PLOTS_DIR, exist_ok=True)
     save_path = os.path.join(PLOTS_DIR, f"{task}_learning_curves_top_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
     print(f"Learning curves saved to: {save_path}")
-
-    plt.show()
 
 ###### SHAP ANALYSIS #####
 
@@ -569,8 +585,6 @@ def barplot_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_k=
     save_path = os.path.join(PLOTS_DIR, f"Global_SHAP_feature_importances_barplot.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
     print(f"Global SHAP feature importances barplot saved to: {save_path}")
-
-    plt.show()
 
 def shap_summary_plot(shap_values, X_test, feature_names):
 
@@ -614,7 +628,5 @@ def shap_summary_plot(shap_values, X_test, feature_names):
     save_path = os.path.join(PLOTS_DIR, f"SHAP_summary_plot.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') 
     print(f"SHAP summary plot saved to: {save_path}")
-
-    plt.show()
     
 

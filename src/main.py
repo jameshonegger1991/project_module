@@ -25,12 +25,12 @@ from src.feature_selection import (
 )
 
 from src.tables import (
-    save_correlations_between_features,
+    save_correlations_among_features,
     save_correlations_with_target,
     save_detailed_results_by_k,
     save_rashomon_set,
     save_results,
-    save_summary,
+    save_summary_of_metrics,
     save_global_shap_rankings,
     save_missing_values_report,
     save_descriptive_statistics,
@@ -42,17 +42,17 @@ from src.tables import (
 
 from src.visualisations import (
     barplot_global_shap_rankings,
-    display_barplots,
-    display_histograms,
-    display_spearman_correlation_matrix,
-    display_violin_plots,
-    export_barplots,
-    export_histograms,
-    export_violin_plots,
-    plot_confusion_matrices_all_models,
-    plot_learning_curves_all_models,
-    plot_multiple_metrics_vs_features,
-    plot_residuals_from_all_results,
+    save_combined_barplots,
+    save_combined_histograms,
+    save_spearman_correlation_matrix,
+    save_combined_violin_plots,
+    save_individual_barplots,
+    save_individual_histograms,
+    save_individual_violin_plots,
+    save_confusion_matrices_plot_all_models,
+    save_learning_curves_plot_all_models,
+    save_multiple_metrics_vs_features_plot,
+    save_residuals_plot_from_all_results,
     shap_summary_plot,
 )
 from src.model_training import evaluate_k_values, run_models
@@ -68,6 +68,7 @@ from src.SHAP_analysis import (
 
 from src.utils import (
     print_files,
+    display_visualisation,
 )
 
 
@@ -75,10 +76,14 @@ from src.utils import (
 
 if __name__ == "__main__":
 
-    # 1. ========== LOAD / BUILD DATASET ==========
+    # =========================================================
+    # ========== I. BUILD AND LOAD THE DATASET ================
+    # =========================================================
     
-    # Run the following only if you want to build the dataset from scratch
-    # df_raw = reduced_swiss_dataset()
+    print("\n" + "=" * 80)
+    print("I. BUILD AND LOAD THE DATASET")
+    print("=" * 80)
+    
     df_raw = "dataset/swiss_reduced_dataset.csv"
 
     if not os.path.exists(df_raw):
@@ -87,61 +92,154 @@ if __name__ == "__main__":
     else:
         df_raw = pd.read_csv(df_raw)
 
-    (X_train_imputed, X_test_imputed, X_train, X_test, y_train, y_test, df_raw_with_correct_features, df_preprocessed, numeric_imputed_feature_names, all_imputed_feature_names, removed_missing_columns) = run_preprocessing_pipeline(df_raw, MISSING_VALUES_THRESHOLD)
+    # =========================================================
+    # ========== II. PREPROCESSING PROCESS =====================
+    # =========================================================
+    
+    print("\n" + "=" * 80)
+    print("II. PREPROCESSING PROCESS")
+    print("=" * 80)
+    
+    (X_train_imputed, 
+     X_test_imputed, 
+     X_train, 
+     X_test, 
+     y_train, 
+     y_test, 
+     df_raw_with_correct_features, 
+     df_preprocessed, 
+     numeric_imputed_feature_names, 
+     all_imputed_feature_names, 
+     removed_missing_columns) = run_preprocessing_pipeline(df_raw, MISSING_VALUES_THRESHOLD)
 
+    # =========================================================
+    # ========== III. GLOBAL EXPLORATORY DATA ANALYSIS ========
+    # =========================================================
+    
+    print("\n" + "=" * 80)
+    print("III. GLOBAL EXPLORATORY DATA ANALYSIS")
+    print("=" * 80)
+    
     for dir_path in [OUTPUTS_DIR, TABLES_DIR, PLOTS_DIR, MODELS_DIR, SAVEDFILES_DIR]:
         os.makedirs(dir_path, exist_ok=True)
-    """
-    # 2. ========== GLOBAL EXPLORATORY DATA ANALYSIS ==========
-    #get_descriptive_statistics(df_raw_with_correct_features, "GLOBAL DATA EXPLORATORY ANALYSIS (BEFORE CLEANING)")
-    #get_descriptive_statistics(df_preprocessed, "GLOBAL DATA EXPLORATORY ANALYSIS (CLEANED WHOLE DATASET)")
-    #print()
-    #print("Columns removed from training-set missingness:", removed_missing_columns or "None")
-    #print()
-    #generate_missing_values_report(df_raw_with_correct_features, MISSING_VALUES_THRESHOLD, "MISSING VALUES REPORT (BEFORE CLEANING)")
+    
+    # Data analysis: generate tables
+    save_descriptive_statistics(df_raw_with_correct_features, "GLOBAL DATA EXPLORATORY ANALYSIS (BEFORE CLEANING)")
+    save_descriptive_statistics(df_preprocessed, "GLOBAL DATA EXPLORATORY ANALYSIS (CLEANED WHOLE DATASET)")
+    print("Columns removed from training-set missingness:", removed_missing_columns or "None")
+    save_missing_values_report(df_raw_with_correct_features, MISSING_VALUES_THRESHOLD, "MISSING VALUES REPORT (BEFORE CLEANING)")
 
-    # Optional visualisations on original/interpretable units.
-    #export_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
-    #export_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
-    #export_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
-    #display_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
-    #display_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
-    #display_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
+    # Data analysis: generate plots 
+    save_individual_histograms(df_raw_with_correct_features, "BEFORE CLEANING")
+    save_individual_violin_plots(df_raw_with_correct_features, "BEFORE CLEANING")
+    save_individual_barplots(df_raw_with_correct_features, "BEFORE CLEANING")
+    save_combined_histograms(df_raw_with_correct_features)
+    save_combined_violin_plots(df_raw_with_correct_features)
+    save_combined_barplots(df_raw_with_correct_features)
 
-    # 3. ========== TRAIN-SET EDA AFTER IMPUTATION ==========
+    # Data analysis: display tables and plots
+    print(f"\n DESCRIPTIVE STATISTICS:")
+    print_files(f"{TABLES_DIR}/GLOBAL DATA EXPLORATORY ANALYSIS (BEFORE CLEANING).txt")
+    print(f"\n COMBINED BAR PLOTS FOR ALL CATEGORICAL FEATURES:")
+    display_visualisation(f"{PLOTS_DIR}/univariate_plots/barplots/Bar Plots - All Categorical Features (BEFORE CLEANING AND IMPUTATION).png")
+    print(f"\n COMBINED HISTOGRAMS FOR ALL NUMERIC FEATURES:")
+    display_visualisation(f"{PLOTS_DIR}/univariate_plots/histograms/Histograms - All Numeric Features (BEFORE CLEANING AND IMPUTATION).png")
+    print(f"\n COMBINED VIOLIN PLOTS FOR ALL NUMERIC FEATURES:")
+    display_visualisation(f"{PLOTS_DIR}/univariate_plots/violin_plots/Violin Plots - All Numeric Features (BEFORE CLEANING AND IMPUTATION).png")
+
+    # ===========================================================
+    # IV. EXPLORATORY DATA ANALYSIS ON TRAIN-SET AFTER IMPUTATION 
+    # ===========================================================
+    
+    print("\n" + "=" * 80)
+    print("IV. EXPLORATORY DATA ANALYSIS ON TRAIN-SET AFTER IMPUTATION")
+    print("=" * 80)
+
     eda_preprocessor = create_eda_preprocessor(X_train)
     X_train_imputed_for_eda = eda_preprocessor.fit_transform(X_train)
-    X_test_imputed_for_eda = eda_preprocessor.transform(X_test)
 
     df_train_set_for_eda = create_imputed_dataframe(
-        X_train_imputed_for_eda,
-        eda_preprocessor,
-        y_train,
+    X_train_imputed_for_eda,
+    eda_preprocessor,
+    y_train,
     )
 
-    #save_spearman_correlation_matrix(df_train_set_for_eda, "SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION)")
-    #save_correlations_with_target(df_train_set_for_eda, "PV1MATH")
-    #save_correlations_between_features(df_train_set_for_eda, "PV1MATH")
+    # Data analysis: generate and save correlation computations
+    save_spearman_correlation_matrix(df_train_set_for_eda, "SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION)")
+    save_correlations_with_target(df_train_set_for_eda, "PV1MATH")
+    save_correlations_among_features(df_train_set_for_eda, "PV1MATH")
+
+    # Data analysis: display correlation tables and correlation matrix
+    display_visualisation(f"{PLOTS_DIR}/multivariate_plots/SPEARMAN CORRELATION MATRIX (TRAIN SET AFTER IMPUTATION).png")
+    print_files(f"{TABLES_DIR}/correlations_with_PV1MATH.txt")
+    print_files(f"{TABLES_DIR}/correlations_between_features.txt")
+
     
-    # 4. ========== FEATURE SELECTION ==========
-    """
+    # ==============================================================
+    # V. FEATURE SELECTION (FOR CLASSIFICATION AND REGRESSION TASKS) 
+    # ==============================================================
+    
+    print("\n" + "=" * 80)
+    print("V. FEATURE SELECTION (FOR CLASSIFICATION AND REGRESSION TASKS)")
+    print("=" * 80)
+
     #y_train/test for classification task
     y_train_class = pd.cut(y_train, bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
     y_test_class = pd.cut(y_test,bins = CLASS_BOUNDARIES, labels = CLASS_LABELS, right = False, include_lowest = True)
 
     # regression
-    (final_features_ranking_reg, variance_threshold_df_reg, ranking_MI_df_reg, ranking_anova_df_reg, ranking_rfe_df_reg, X_train_after_var_thresh_reg, X_test_after_var_thresh_reg, selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train, all_imputed_feature_names, task = "regression")
-    """
-    #classification
-    (final_features_ranking_class, variance_threshold_df_class, ranking_MI_df_class, ranking_anova_df_class, ranking_rfe_df_class, X_train_after_var_thresh_class, X_test_after_var_thresh_class, selected_columns_var_thresh_class) = run_feature_selection_pipeline(X_train_imputed, X_test_imputed, y_train_class, all_imputed_feature_names, task = "classification")
+    (final_features_ranking_reg, 
+     variance_threshold_df_reg, 
+     ranking_MI_df_reg, 
+     ranking_anova_df_reg, 
+     ranking_rfe_df_reg, 
+     X_train_after_var_thresh_reg, 
+     X_test_after_var_thresh_reg, 
+     selected_columns_var_thresh_reg) = run_feature_selection_pipeline(X_train_imputed, 
+                                                                       X_test_imputed, y_train, 
+                                                                       all_imputed_feature_names, 
+                                                                       task = "regression")
     
-    # 5. ========= MODEL TRAINING ===========
+    #classification
+    (final_features_ranking_class, 
+     variance_threshold_df_class, 
+     ranking_MI_df_class, 
+     ranking_anova_df_class, 
+     ranking_rfe_df_class, 
+     X_train_after_var_thresh_class, 
+     X_test_after_var_thresh_class, 
+     selected_columns_var_thresh_class) = run_feature_selection_pipeline(X_train_imputed, 
+                                                                         X_test_imputed, 
+                                                                         y_train_class, 
+                                                                         all_imputed_feature_names, 
+                                                                         task = "classification")
+
+    #Display feature selection tables
+    print_files(f"{TABLES_DIR}/variance_threshold_ranking.txt")
+    print("=" * 80)
+    print(f"REGRESSION TASK:")
+    print("=" * 80)
+    print_files(f"{TABLES_DIR}/regression_mutual_info_ranking.txt")
+    print_files(f"{TABLES_DIR}/regression_anova_ranking.txt")
+    print_files(f"{TABLES_DIR}/regression_rfe_ranking.txt")
+    print_files(f"{TABLES_DIR}/regression_combined_feature_selection_rankings.txt")
+    print("=" * 80)
+    print(f"CLASSIFICATION TASK:")
+    print("=" * 80)
+    print_files(f"{TABLES_DIR}/classification_mutual_info_ranking.txt")
+    print_files(f"{TABLES_DIR}/classification_anova_ranking.txt")
+    print_files(f"{TABLES_DIR}/classification_rfe_ranking.txt")
+    print_files(f"{TABLES_DIR}/classification_combined_feature_selection_rankings.txt")
+
+
+    # ==============================================================
+    # ========== VI.I MODEL TRAINING FOR REGRESSION TASK  ==========
+    # ==============================================================
     
     print("\n" + "=" * 80)
-    print("REGRESSION MODELS EVALUATION")
+    print("VI.I MODEL TRAINING FOR REGRESSION TASK")
     print("=" * 80)
 
-    
     # Evaluate regression models for different top-k features
     regression_results_df, regression_all_results_dic = evaluate_k_values(
         X_train_after_var_thresh_reg, y_train, X_test_after_var_thresh_reg, y_test,
@@ -151,33 +249,40 @@ if __name__ == "__main__":
         task='regression',
         k_values=[5, 10, 15, 20]
     )
-    
+
+    # ========== TEMPORARY FILES SAVED FOR QUICKER DEBUG PURPOSE ======================
     # Save regression results DataFrame to tables folder
-    regression_results_df.to_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'), index=False)
-    print(f" Regression results saved to '{os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv')}'")
+    #regression_results_df.to_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'), index=False)
+    #print(f" Regression results saved to '{os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv')}'")
 
     # Save regression all_results dictionary to models folder
-    joblib.dump(regression_all_results_dic, os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
-    print(f" Regression all_results saved to '{os.path.join(MODELS_DIR, 'regression_all_results.pkl')}'")
+    #joblib.dump(regression_all_results_dic, os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
+    #print(f" Regression all_results saved to '{os.path.join(MODELS_DIR, 'regression_all_results.pkl')}'")
 
-    regression_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'))
-    regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
+    #regression_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'regression_results_by_k.csv'))
+    #regression_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'regression_all_results.pkl'))
+    # =================================================================================
 
-    save_detailed_results_by_k(regression_all_results_dic)
-    save_summary(regression_results_df, task='regression')
+    save_detailed_results_by_k(regression_all_results_dic, task='regression')
+    save_results(regression_results_df)
+    save_summary_of_metrics(regression_results_df, task='regression')
 
-    plot_multiple_metrics_vs_features(regression_results_df, task='regression')
-    plot_residuals_from_all_results(regression_all_results_dic, k_chosen=10)
-    plot_learning_curves_all_models(
+    save_multiple_metrics_vs_features_plot(regression_results_df, task='regression')
+    save_residuals_plot_from_all_results(regression_all_results_dic, k_chosen=10)
+    save_learning_curves_plot_all_models(
             regression_all_results_dic, 
             k_chosen=10, 
             X_train_after_var_thresh=X_train_after_var_thresh_reg, 
             y_train=y_train, 
             task='regression'
         )
+
+    # ==============================================================
+    # ======= VI.II MODEL TRAINING FOR CLASSIFICATION TASK  ========
+    # ==============================================================
     
     print("\n" + "=" * 80)
-    print("CLASSIFICATION MODELS EVALUATION")
+    print("VI.II MODEL TRAINING FOR CLASSIFICATION TASK")
     print("=" * 80)
     
     # Evaluate classification models for different top-k features
@@ -201,20 +306,21 @@ if __name__ == "__main__":
     classification_results_df = pd.read_csv(os.path.join(SAVEDFILES_DIR, 'classification_results_by_k.csv'))
     classification_all_results_dic = joblib.load(os.path.join(MODELS_DIR, 'classification_all_results.pkl'))
 
-    save_detailed_results_by_k(classification_all_results_dic)
-    save_summary(classification_results_df, task='classification')
+    save_detailed_results_by_k(classification_all_results_dic, task='classification')
+    save_results(classification_results_df)
+    save_summary_of_metrics(classification_results_df, task='classification')
 
-    plot_multiple_metrics_vs_features(classification_results_df, task='classification')
-    plot_confusion_matrices_all_models(classification_all_results_dic, k_chosen=10, class_labels=CLASS_LABELS)
+    save_multiple_metrics_vs_features_plot(classification_results_df, task='classification')
+    save_confusion_matrices_plot_all_models(classification_all_results_dic, k_chosen=10, class_labels=CLASS_LABELS)
 
-    plot_learning_curves_all_models(
+    save_learning_curves_plot_all_models(
         classification_all_results_dic, 
         k_chosen=10, 
         X_train_after_var_thresh=X_train_after_var_thresh_class, 
         y_train=y_train_class, 
         task='classification'
     )
-    """
+    
 
     # 6. ========= EXPLAINABILITY ===========
     
