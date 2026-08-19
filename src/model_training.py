@@ -13,8 +13,6 @@ from sklearn.svm import SVC, SVR
 from src.feature_selection import select_top_features
 from sklearn.utils.class_weight import compute_sample_weight
 
-from src.tables import save_results
-
 
 def run_models(X_train, y_train, X_test, y_test, model_names, task):
     """
@@ -26,9 +24,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
     if task == "regression":
         
         for name in model_names:
-            print(f"\n{'='*60}")
-            print(f"Training {name} (Regressor)")
-            print('='*60)
+            print(f" > Training {name} (Regressor)...")
             
             if name == "LR":
                 alphas = [0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
@@ -61,7 +57,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
 
                 # No scaler needed for RF
                 pipeline = Pipeline([("model", RandomForestRegressor(random_state=7, n_jobs=-1))])
-                model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=1) # cv = 3 due to limited computational power
+                model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=0) # cv = 3 due to limited computational power
                 is_lasso = False
                 
             elif name == "XGBoost":
@@ -78,7 +74,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 }
 
                 pipeline = Pipeline([("model", XGBRegressor(random_state=7, n_jobs=-1))])
-                model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=1)
+                model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=0)
                 is_lasso = False
                 
             elif name == "SVR":
@@ -92,7 +88,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 }
 
                 pipeline = Pipeline([("scaler", StandardScaler()), ("model", SVR())])
-                model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=1)
+                model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=0)
                 is_lasso = False
                 
             else:
@@ -123,9 +119,6 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 coefs = model.best_estimator_.named_steps['model'].coef_
                 n_selected = sum(abs(coefs) > 1e-6)
                 best_alpha = model.best_params_['model__alpha']
-                
-                print(f"Best alpha        : {best_alpha}")
-                print(f"Features selected : {n_selected}/{p}")
             
             results[name] = {
                 'model': model,
@@ -158,9 +151,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
         y_test_original = y_test.copy() if hasattr(y_test, 'copy') else y_test
         
         for name in model_names:
-            print(f"\n{'='*60}")
-            print(f"Training {name} (Classifier)")
-            print('='*60)
+            print(f" > Training {name} (Classifier)...")
             
             # Reset y for each model (except XGBoost which needs encoding)
             y_train_use = y_train_original
@@ -196,7 +187,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     cv=5,
                     scoring='f1_macro',
                     n_jobs=-1,
-                    verbose=1
+                    verbose=0
                 )
                 
             elif name == "RF":
@@ -221,7 +212,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     cv=3,
                     scoring='f1_macro',  # Important for imbalanced classes
                     n_jobs=-1,
-                    verbose=1,
+                    verbose=0,
                     random_state=7
                 )
                 
@@ -257,7 +248,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     cv=3,
                     scoring='f1_macro',
                     n_jobs=-1,
-                    verbose=1,
+                    verbose=0,
                     random_state=7
                 )
                 
@@ -284,7 +275,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     cv=3,
                     scoring='f1_macro',
                     n_jobs=-1,
-                    verbose=1,
+                    verbose=0,
                     random_state=7
                 )
                 
@@ -360,10 +351,8 @@ def evaluate_k_values(X_train, y_train, X_test, y_test, final_features_ranking, 
     rows = []
     
     for k in k_values:
-        print(f"\n{'#'*60}")
-        print(f"# TESTING K = {k} FEATURES")
-        print(f"{'#'*60}")
-        
+        print(f"\n*** TRAINING MODELS WITH THE {k} TOP FEATURES ***")
+        print()
         # Select top k features
         top_k_features, _ = select_top_features(final_features_ranking, k)
         feature_to_index = {name: i for i, name in enumerate(feature_names)}

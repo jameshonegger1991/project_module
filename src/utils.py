@@ -1,4 +1,7 @@
+from IPython import get_ipython
 from IPython.display import Image, display
+from PIL import Image as PILImage
+import matplotlib.pyplot as plt
 import os
 
 def print_files(file_path: str):
@@ -54,12 +57,23 @@ def check_overfitting_classification(train_f1, cv_f1):
 
 def display_visualisation(path):
     """
-    Display saved plot (png format) from the specified file path.
+    Display a saved PNG image in both Jupyter Notebooks and standard Python scripts.
     """
     if not os.path.isfile(path):
         print(f"File not found: {path}")
         return
-    
-    display(Image(filename=path))
 
+    if get_ipython() is not None: #for jupyternotebook
+        display(Image(filename=path))
 
+    else: # for standard python script
+        img = PILImage.open(path)
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.imshow(img)
+        ax.axis("off")
+
+        plt.show(block=True)
+        #print("Press any key or click on the figure to continue...")
+        #plt.waitforbuttonpress()
+        #plt.close(fig)

@@ -12,7 +12,7 @@ from src.config import (
     PLOTS_DIR,
 )
 
-# EDA plots
+# GLOBAL EXPLORATORY DATA ANALYSIS (ON WHOLE SET)
 
 def save_individual_histograms(df, title = "Histogram"):
     """
@@ -27,7 +27,7 @@ def save_individual_histograms(df, title = "Histogram"):
         print("No numeric columns found to generate histograms.")
         return
     
-    os.makedirs("outputs/plots/univariate_plots/histograms", exist_ok=True)
+    os.makedirs(f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/histograms", exist_ok=True)
     
     for col in numeric_cols:
         plt.figure(figsize=(8, 4))
@@ -41,14 +41,14 @@ def save_individual_histograms(df, title = "Histogram"):
         plt.tight_layout()
         
         #plt.show()
-        plt.savefig(f"outputs/plots/univariate_plots/histograms/{col}_{title}.png", dpi=150, bbox_inches='tight')
+        plt.savefig(f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/histograms/{col}_{title}.png", dpi=150, bbox_inches='tight')
         plt.close()
     
-    print(f"{len(numeric_cols)} histograms saved to outputs/plots/univariate_plots/")
+    print(f"\n • {len(numeric_cols)} histograms saved to {PLOTS_DIR}/EDA/whole_dataset/univariate_plots/histograms")
 
 def save_individual_violin_plots(df, title = "Violin Plot"):
     """
-    Save violin plots for all numeric columns to 'outputs/plots/univariate_plots/violin_plots/'.
+    Save violin plots for all numeric columns to 'outputs/plots/EDA/whole_dataset/univariate_plots/violin_plots/'.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot generate violin plots.")
@@ -59,7 +59,7 @@ def save_individual_violin_plots(df, title = "Violin Plot"):
         print("No numeric columns found to generate violin plots.")
         return
     
-    os.makedirs("outputs/plots/univariate_plots/violin_plots", exist_ok=True)
+    os.makedirs(f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/violin_plots", exist_ok=True)
     
     for col in numeric_cols:
         plt.figure(figsize=(8, 4))
@@ -75,10 +75,10 @@ def save_individual_violin_plots(df, title = "Violin Plot"):
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         
-        plt.savefig(f"outputs/plots/univariate_plots/violin_plots/{col}_{title}.png", dpi=150, bbox_inches='tight')
+        plt.savefig(f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/violin_plots/{col}_{title}.png", dpi=150, bbox_inches='tight')
         plt.close()
     
-    print(f"{len(numeric_cols)} violin plots saved to outputs/plots/univariate_plots/violin_plots/")
+    print(f"\n • {len(numeric_cols)} violin plots saved to {PLOTS_DIR}/EDA/whole_dataset/univariate_plots/violin_plots")
 
 def save_individual_barplots(df, title = "Bar Plot"):
     """
@@ -93,7 +93,7 @@ def save_individual_barplots(df, title = "Bar Plot"):
         print("No categorical columns found to generate bar plots.")
         return
 
-    folder_path = "outputs/plots/univariate_plots/barplots"
+    folder_path = f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/barplots" 
     os.makedirs(folder_path, exist_ok=True)
     
     for col in categorical_cols:
@@ -118,9 +118,9 @@ def save_individual_barplots(df, title = "Bar Plot"):
         plt.savefig(f"{folder_path}/{col}_{title}.png", dpi=150, bbox_inches='tight')
         plt.close()
     
-    print(f"{len(categorical_cols)} bar plots saved to {folder_path}/")
+    print(f"\n • {len(categorical_cols)} bar plots saved to {folder_path}/")
 
-def save_combined_histograms(df, title = "Histograms - All Numeric Features (BEFORE CLEANING AND IMPUTATION)"):
+def save_combined_histograms(df, title = "Histograms - All Numeric Features (Before Cleaning And Imputation)"):
     """
     Save a combined grid of histograms for all numeric columns.
     """ 
@@ -133,7 +133,7 @@ def save_combined_histograms(df, title = "Histograms - All Numeric Features (BEF
         print("No numeric columns found to display histograms.")
         return
 
-    folder_path = "outputs/plots/univariate_plots/histograms"
+    folder_path = f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/histograms"
     os.makedirs(folder_path, exist_ok=True)
 
     axes = df[numeric_cols].hist(figsize=(22, 18), bins=30, xlabelsize=8, ylabelsize=8)
@@ -146,9 +146,9 @@ def save_combined_histograms(df, title = "Histograms - All Numeric Features (BEF
     plt.subplots_adjust(hspace=0.9, wspace=0.4)
     plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"{title}.png saved to {folder_path}/")
+    print(f"\n • {title}.png saved to {folder_path}/")
 
-def save_combined_violin_plots(df, title = "Violin Plots - All Numeric Features (BEFORE CLEANING AND IMPUTATION)"):
+def save_combined_violin_plots(df, title = "Violin Plots - All Numeric Features (Before Cleaning And Imputation)"):
     """
     Save a combined grid of violin plots for all numeric columns. 
     Inspiration: https://www.datasciencebyexample.com/2022/05/15/2022-05-15-1/ 
@@ -162,7 +162,7 @@ def save_combined_violin_plots(df, title = "Violin Plots - All Numeric Features 
         print("No numeric columns found to generate violin plots.")
         return
 
-    folder_path = "outputs/plots/univariate_plots/violin_plots"
+    folder_path = f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/violin_plots"
     os.makedirs(folder_path, exist_ok=True)
 
     n_cols = 4 
@@ -196,9 +196,9 @@ def save_combined_violin_plots(df, title = "Violin Plots - All Numeric Features 
     plt.subplots_adjust(hspace=1.0, wspace=0.4)
     plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"{title}.png saved to {folder_path}/")
+    print(f"\n • {title}.png saved to {folder_path}/")
     
-def save_combined_barplots(df, title = "Bar Plots - All Categorical Features (BEFORE CLEANING AND IMPUTATION)"):
+def save_combined_barplots(df, title = "Bar Plots - All Categorical Features (Before Cleaning And Imputation)"):
     """
     Save a combined grid of bar plots for all categorical columns in the DataFrame.
     """
@@ -214,7 +214,7 @@ def save_combined_barplots(df, title = "Bar Plots - All Categorical Features (BE
 
     n_cols = 2
 
-    folder_path = "outputs/plots/univariate_plots/barplots"
+    folder_path = f"{PLOTS_DIR}/EDA/whole_dataset/univariate_plots/barplots"
     os.makedirs(folder_path, exist_ok=True)
 
     n_rows = (len(cat_cols) + n_cols - 1) // n_cols
@@ -240,8 +240,9 @@ def save_combined_barplots(df, title = "Bar Plots - All Categorical Features (BE
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"{title}.png saved to {folder_path}/")
+    print(f"\n • {title}.png saved to {folder_path}/")
 
+# GLOBAL EXPLORATORY DATA ANALYSIS (ON TRAIN SET)
 def save_spearman_correlation_matrix(df, title = 'Spearman Correlation Matrix'):
     """
     Generates the Spearman correlation matrix for all numeric variables.
@@ -250,7 +251,7 @@ def save_spearman_correlation_matrix(df, title = 'Spearman Correlation Matrix'):
         print("The DataFrame is empty. Cannot generate Spearman correlation matrix.")
         return
 
-    folder_path = "outputs/plots/multivariate_plots"
+    folder_path = f"{PLOTS_DIR }/EDA/train_set/multivariate_plots"
     os.makedirs(folder_path, exist_ok=True)
 
     spearman_matrix = df.corr(method='spearman')
@@ -281,9 +282,9 @@ def save_spearman_correlation_matrix(df, title = 'Spearman Correlation Matrix'):
     plt.subplots_adjust(left=0.16, bottom=0.18, top=0.92)
     plt.savefig(f"{folder_path}/{title}.png", dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"{title}.png saved to {folder_path}/")
+    print(f"\n • {title}.png saved to {folder_path}/")
 
-# Model evaluation plots
+# MODEL TRAINING
 def save_multiple_metrics_vs_features_plot(results_df, task, metrics=None, figsize=(14, 10)):
     """
     Plots multiple metrics into one figure with different subplots that show all models vs. number of features.
@@ -304,7 +305,7 @@ def save_multiple_metrics_vs_features_plot(results_df, task, metrics=None, figsi
         results_df[metric] = pd.to_numeric(results_df[metric], errors='coerce') # ensures that any non-numeric values present during this conversion are replaced with NaN.
     
     if PLOTS_DIR:
-        os.makedirs(PLOTS_DIR, exist_ok=True)
+        os.makedirs(f"{PLOTS_DIR}/model_training", exist_ok=True)
     
     models = results_df['Model'].unique()
     palette = sns.color_palette("tab10", n_colors=len(models))
@@ -364,18 +365,18 @@ def save_multiple_metrics_vs_features_plot(results_df, task, metrics=None, figsi
     
     fig.suptitle(f'{task.capitalize()} Performance vs. Number of Features', fontsize=16, y=0.96)
     plt.subplots_adjust(top=0.88, bottom=0.08, hspace=0.45, wspace=0.30)
-    
 
-    save_path = os.path.join(PLOTS_DIR, f"{task}_metrics_vs_features_plot.png")
+    save_path = os.path.join(PLOTS_DIR,"model_training",f"{task}_metrics_vs_features_plot.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
     plt.close()
-    print(f"Metrics vs features plot saved to: {save_path}")
+    print(f"\n • Metrics vs features plot saved to: {save_path}")
 
 def save_residuals_plot_from_all_results(all_results_regression, k_chosen, figsize=(14, 10)):
     """
     Plots residual plots for all regression models at the chosen 'k' by using the 'all_results' dictionary generated by evaluate_k_values.
     (Custom wrapper designed for pipeline consistency over sklearn's PredictionErrorDisplay).
     """
+    os.makedirs(f"{PLOTS_DIR}/model_training", exist_ok=True)
     data_k = all_results_regression[k_chosen]['results']
     models = list(data_k.keys())
     
@@ -410,10 +411,10 @@ def save_residuals_plot_from_all_results(all_results_regression, k_chosen, figsi
     fig.suptitle(f"Residual Analysis for top {k_chosen} features", fontsize=16)
     plt.tight_layout(h_pad=2.5) 
 
-    save_path = os.path.join(PLOTS_DIR, f"regression_residual_plots_for_{k_chosen}_features.png")
+    save_path = os.path.join(PLOTS_DIR,"model_training",f"regression_residual_plots_for_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
     plt.close()
-    print(f"regression_residual plots for {k_chosen} features saved to: {save_path}")
+    print(f"\n • regression_residual plots for {k_chosen} features saved to: {save_path}")
     
 def save_confusion_matrices_plot_all_models(all_results_classification, k_chosen, class_labels, figsize=(14, 10)):
     """
@@ -472,12 +473,11 @@ def save_confusion_matrices_plot_all_models(all_results_classification, k_chosen
     # Withouth this fine-tune layout margins, titles and labels clip
     plt.subplots_adjust(top=0.90, bottom=0.18, left=0.08, right=0.88, hspace=0.45, wspace=0.3)
 
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    
-    save_path = os.path.join(PLOTS_DIR, f"confusion_matrices_top_{k_chosen}_features.png")
+    os.makedirs(f"{PLOTS_DIR}/model_training", exist_ok=True)
+    save_path = os.path.join(PLOTS_DIR,"model_training",f"confusion_matrices_top_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"Confusion matrices saved to: {save_path}")
+    print(f"\n • Confusion matrices saved to: {save_path}")
 
 def save_learning_curves_plot_all_models(all_results, k_chosen, X_train_after_var_thresh, y_train, task='regression', figsize=(14, 10)):
     """
@@ -545,14 +545,13 @@ def save_learning_curves_plot_all_models(all_results, k_chosen, X_train_after_va
     fig.suptitle(f"Learning Curves for all models (top {k_chosen} features)", fontsize=16)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    save_path = os.path.join(PLOTS_DIR, f"{task}_learning_curves_top_{k_chosen}_features.png")
+    os.makedirs(f"{PLOTS_DIR}/model_training", exist_ok=True)
+    save_path = os.path.join(PLOTS_DIR,"model_training",f"{task}_learning_curves_top_{k_chosen}_features.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"Learning curves saved to: {save_path}")
+    print(f"\n • Learning curves saved to: {save_path}")
 
-###### SHAP ANALYSIS #####
-
+# SHAP ANALYSIS 
 def barplot_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_k=10):
 
     n_models = len(global_mean_absolute_shap_rankings_dict)
@@ -582,9 +581,11 @@ def barplot_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_k=
     fig.suptitle("Global SHAP Feature Importances", fontsize=16, fontweight='bold')
     plt.tight_layout()
 
-    save_path = os.path.join(PLOTS_DIR, f"Global_SHAP_feature_importances_barplot.png")
+    os.makedirs(f"{PLOTS_DIR}/SHAP_analysis", exist_ok=True)
+    save_path = os.path.join(PLOTS_DIR, "SHAP_analysis", f"Global_SHAP_feature_importances_barplot.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') #for better margins
-    print(f"Global SHAP feature importances barplot saved to: {save_path}")
+    plt.close()
+    print(f"\n • Global SHAP feature importances barplot saved to: {save_path}")
 
 def shap_summary_plot(shap_values, X_test, feature_names):
 
@@ -625,8 +626,10 @@ def shap_summary_plot(shap_values, X_test, feature_names):
     fig.suptitle("SHAP Summary plot", fontsize=16, fontweight='bold')
     plt.tight_layout()
 
-    save_path = os.path.join(PLOTS_DIR, f"SHAP_summary_plot.png")
+    os.makedirs(f"{PLOTS_DIR}/SHAP_analysis", exist_ok=True)
+    save_path = os.path.join(PLOTS_DIR, "SHAP_analysis", f"SHAP_summary_plot.png")
     plt.savefig(save_path, dpi=300, bbox_inches='tight') 
-    print(f"SHAP summary plot saved to: {save_path}")
+    plt.close()
+    print(f"\n • SHAP summary plot saved to: {save_path}")
     
 

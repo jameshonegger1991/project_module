@@ -237,7 +237,6 @@ def intra_model_stability_assessment(local_shap_dict, feature_names, n_iteration
     np.random.seed(random_seed)
     
     for model_name in local_shap_dict:
-        print(f"DEBUG: Model treatment: {model_name}")
         
         data = local_shap_dict[model_name]
         shap_matrix = data['shap_values']  
@@ -391,10 +390,9 @@ def run_complete_shap_analysis_and_classification(
         number_of_features_retained_for_final_classification,
         ):
 
-    print(f"The Rashomon set is built...")
+    print(f"\n > The Rashomon set is being built...")
     rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable = rashomon_set_builder(all_training_model_results_dic, number_of_features_chosen_for_model_training, task, rashomon_set_threshold)
     save_rashomon_set(rashomon_set, rashomon_best_score, rashomon_lowest_score_acceptable, task, number_of_features_chosen_for_model_training, rashomon_set_threshold)
-    print(f"The Rashomon set is saved to the 'outputs/tables' directory.")
 
     # Create X_train/X_test for the related k-features selected
     indices_k = all_training_model_results_dic[number_of_features_chosen_for_model_training]['indices']
@@ -402,30 +400,28 @@ def run_complete_shap_analysis_and_classification(
     X_train_k = X_train[:, indices_k]
     X_test_k = X_test[:, indices_k]
 
-    print(f"Global and local SHAP values are computed...")
+    print(f"\n > Global and local SHAP values are computed...")
     global_shap_rankings, shap_values_for_all_models = local_and_global_shap_values_calculator(rashomon_set, X_train_k, X_test_k, feature_names_k)
     save_global_shap_rankings(global_shap_rankings, number_of_features_chosen_for_model_training)
     print(f"Global shap rankings are saved to the 'outputs/tables' directory.")
 
-    print(f"Feature agreement statistics are computed...")
+    print(f"\n > Feature agreement statistics are computed...")
     feature_agreement_stats_df = feature_agreement_stats(global_shap_rankings)
     save_feature_agreement_stats(feature_agreement_stats_df)
-    print(f"Feature agreement statistics are saved to the 'outputs/tables' directory.")
 
-    print(f"Intra-model stability assessment is computed...")
+
+    print(f"\n > Intra-model stability assessment is computed...")
     intra_model_assessment_result = intra_model_stability_assessment(shap_values_for_all_models, feature_names_k)
     save_intra_model_stability_assessment(intra_model_assessment_result)
-    print(f"Intra-model stability assessment is saved to the 'outputs/tables' directory.")
 
-    print(f"Inter-model concordance assessment is computed...")
+
+    print(f"\n > Inter-model concordance assessment is computed...")
     inter_model_concordance_df = inter_model_concordance_assessment(global_shap_rankings, number_of_features_retained_for_final_classification)
     save_inter_model_concordance_agreement(inter_model_concordance_df)
-    print(f"Inter-model concordance assessment is saved to the 'outputs/tables' directory.")
 
-    print(f"Feature robustness assessment is computed...")
+    print(f"\n > Feature robustness assessment is computed...")
     final_classification = assess_features_robustness(global_shap_rankings, intra_model_assessment_result, number_of_features_retained_for_final_classification)
     save_feature_robustness_assessment(final_classification)
-    print(f"Feature robustness assessment is saved to the 'outputs/tables' directory.")
 
     return global_shap_rankings, shap_values_for_all_models, X_test_k, feature_names_k, number_of_features_chosen_for_model_training
 
