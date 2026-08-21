@@ -11,7 +11,12 @@ from src.utils import check_overfitting_regression, check_overfitting_classifica
 # GLOBAL EXPLORATORY DATA ANALYSIS (ON WHOLE SET)
 def save_missing_values_report(df, threshold, title):
     """
-    Display missing-value statistics for columns and rows.
+    Save missing-value statistics for columns and rows to 'outputs/tables/EDA/whole_dataset'.
+
+    Arguments:
+    - df (pd.DataFrame): The DataFrame to analyse.
+    - threshold (float): The missing value percentage threshold. Values above it are flagged as high missingness.
+    - title (str): The title/filename of the report.
     """
     
     col_pct = get_missing_percentages_per_column(df)
@@ -72,8 +77,12 @@ def save_missing_values_report(df, threshold, title):
 
 def save_descriptive_statistics(df, title):
     """
-    Display descriptive statistics for a DataFrame.
+    Save descriptive statistics to 'outputs/tables/EDA/whole_dataset'.
     It includes shape, descriptive stats, head, info, and skewness.
+
+    Arguments:
+    - df (pd.DataFrame): The DataFrame to analyse.
+    - title (str): The title/filename of the report.
     """
     file_path = f"{TABLES_DIR}/EDA/whole_dataset/{title}.txt"
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -131,14 +140,15 @@ def save_descriptive_statistics(df, title):
     print(f"\n • {title}.txt saved to {file_path}")
 
 # GLOBAL EXPLORATORY DATA ANALYSIS (ON TRAIN SET)
+
 def save_correlations_with_target(df, target = "PV1MATH"):
     """
-    Displays all variables according to their Spearman correlation
-    with the target variable.
+    Save all variables according to their Spearman correlation
+    with the target variable to 'outputs/tables/EDA/train_set'.
 
     Positive and negative correlations are displayed separately.
 
-    Parameters:
+    Arguments:
     - df (pd.DataFrame): The input DataFrame.
     - target (str): The target variable.
     """
@@ -175,11 +185,17 @@ def save_correlations_with_target(df, target = "PV1MATH"):
 
 def save_correlations_among_features(df, target = "PV1MATH", corr_threshold = 0.70):
     """
-    Displays the 20 strongest positive and negative Spearman correlations
-    among features, excluding the target variable.
+    Save the 20 strongest positive and negative Spearman correlations
+    among features, excluding the target variable, to 'outputs/tables/EDA/train_set'.
 
-    It also displays feature pairs whose absolute correlation exceeds
+    It also saves feature pairs whose absolute correlation exceeds
     the specified threshold, indicating a potential risk of multicollinearity.
+
+    Arguments:
+    - df (pd.DataFrame): The input DataFrame to analyse.
+    - target (str): the name of the target variable in the input dataframe.
+    - corr_threshold(float, optional): the correlation threshold above which a risk of multicollineraity is flagged. 
+    Default is 0.70.
     """
     if df.empty:
         print("The DataFrame is empty. Cannot calculate correlations.")
@@ -258,6 +274,16 @@ def save_correlations_among_features(df, target = "PV1MATH", corr_threshold = 0.
 
 def save_variance_threshold(ranking_VThresh: pd.DataFrame, threshold = VARIANCE_THRESHOLD, selected_cols: list = [], feature_names: list = []):
 
+    """
+    Save the Variance Threshold feature ranking to 'outputs/tables/feature_selection'.
+
+    Arguments:
+    - ranking_VThresh (pd.DataFrame): The DataFrame containing the Variance Threshold results, returned by apply_variance_threshold().
+    - threshold (float, optional): The variance threshold used for feature selection. Defaults to VARIANCE_THRESHOLD (= 0, to flag only constant features).
+    - selected_cols (list, optional): The list of features kept after applying the threshold.
+    - feature_names (list, optional): The complete list of feature names.
+    """
+
     os.makedirs(f"{TABLES_DIR}/feature_selection", exist_ok=True)
     save_file = open(f"{TABLES_DIR}/feature_selection/variance_threshold_ranking.txt", "w")
 
@@ -271,7 +297,14 @@ def save_variance_threshold(ranking_VThresh: pd.DataFrame, threshold = VARIANCE_
     print(f"\n • variance_threshold_ranking.txt saved to outputs/tables/feature_selection")
 
 def save_mutual_info(ranking_MI: pd.DataFrame, task, X_train):
+    """
+    Save the Mutual Information feature ranking to 'outputs/tables/feature_selection'.
 
+    Arguments:
+    - ranking_MI (pd.DataFrame): The DataFrame containing the Mutual Information ranking, returned by apply_mutual_info() in feature_selection.py.
+    - task (str): either 'regression' or 'classification'.
+    - X_train: The training data used for feature selection (after variance threshold applied).
+    """
     os.makedirs(f"{TABLES_DIR}/feature_selection", exist_ok=True)
     save_file = open(f"{TABLES_DIR}/feature_selection/{task}_mutual_info_ranking.txt", "w")
     print("\n" + "=" * 80, file = save_file)
@@ -285,7 +318,14 @@ def save_mutual_info(ranking_MI: pd.DataFrame, task, X_train):
     print(f"\n • {task}_mutual_info_ranking.txt saved to outputs/tables/feature_selection")
     
 def save_anova(ranking_anova: pd.DataFrame, task, X_train):
+    """
+    Save the ANOVA feature ranking to 'outputs/tables/feature_selection'.
 
+    Arguments:
+    - ranking_anova (pd.DataFrame): The DataFrame containing the ANOVA ranking, returned by apply_ANOVA() in feature_selection.py
+    - task (str): 'regression' or 'classification'.
+    - X_train: The training data used for feature selection (after variance threshold applied)
+    """
     os.makedirs(f"{TABLES_DIR}/feature_selection", exist_ok=True)
     save_file = open(f"{TABLES_DIR}/feature_selection/{task}_anova_ranking.txt", "w")
     print("\n" + "=" * 80, file = save_file)
@@ -297,7 +337,14 @@ def save_anova(ranking_anova: pd.DataFrame, task, X_train):
     print(f"\n • {task}_anova_ranking.txt saved to outputs/tables/feature_selection")
 
 def save_rfe(ranking_rfe: pd.DataFrame, task, X_train):
+    """
+    Save the RFE feature ranking to 'outputs/tables/feature_selection'.
 
+    Arguments:
+    - ranking_rfe (pd.DataFrame): The DataFrame containing the RFE ranking, returned by apply_rfe() in feature_selection.py.
+    - task (str): The task type, either 'regression' or 'classification'.
+    - X_train: The training data used for feature selection.
+    """
     os.makedirs(f"{TABLES_DIR}/feature_selection", exist_ok=True)
     save_file = open(f"{TABLES_DIR}/feature_selection/{task}_rfe_ranking.txt", "w")
     print("\n" + "=" * 80, file = save_file)
@@ -309,7 +356,14 @@ def save_rfe(ranking_rfe: pd.DataFrame, task, X_train):
     print(f"\n • {task}_rfe_ranking.txt saved to outputs/tables/feature_selection")
 
 def save_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_names = None, task = 'regression'):
+    """
+    Save the combined feature selection ranking to 'outputs/tables/feature_selection'.
 
+    Arguments:
+    - combined_rankings (pd.DataFrame): The DataFrame containing the combined feature rankings, returned by summarise_feature_rankings() in feature_selection.py.
+    - method_names (list, optional): The feature selection methods used to create the combined ranking. Defaults to None.
+    - task (str, optional): 'regression' or 'classification'. Defaults to 'regression'.
+    """
     os.makedirs(f"{TABLES_DIR}/feature_selection", exist_ok=True)
     save_file = open(f"{TABLES_DIR}/feature_selection/{task}_combined_feature_selection_rankings.txt", "w")
     print("\n" + "=" * 80, file = save_file)
@@ -323,7 +377,15 @@ def save_summarised_feature_rankings(combined_rankings: pd.DataFrame, method_nam
     print(f"\n • {task}_combined_feature_selection_rankings.txt saved to outputs/tables/feature_selection")
     
 def save_top_features(top_features: list, k, save_file=None, task = 'regression'):
+    """
+    Save the top k selected features to a text file.
 
+    Arguments:
+    - top_features (list): The list of selected features, returned by select_top_features() in feature_selection.py.
+    - k (int): The number of top features selected.
+    - save_file (file object, optional): The file where the selected features are written. Defaults to None.
+    - task (str, optional): 'regression' or 'classification'. Defaults to 'regression'.
+    """
     own_file = save_file is None
 
     if own_file:
@@ -347,7 +409,15 @@ def save_top_features(top_features: list, k, save_file=None, task = 'regression'
 
 def save_results(results, model_names=None, top_k=10, save_file = None):
     """
-    Save results for all models in the results dictionary.
+    Internal helper for save_detailed_results_by_k(). It writes all model results
+    (train/test scores, hyperparams, CV, overfitting diagnosis) into a single shared 
+    file or individual model files inside 'outputs/tables/model_training/'.
+
+    Arguments:
+    - results (dict): Model results, returned by evaluate_k_values()
+    - model_names (list, optional): Specific models to save in results (dict). Defaults to all.
+    - top_k (int): Number of features (for filenames).
+    - save_file (file object, optional): The file where the model results are written. Defaults to None.
     """
     if model_names is None:
         model_names = list(results.keys())
@@ -365,7 +435,15 @@ def save_results(results, model_names=None, top_k=10, save_file = None):
             save_classification_result(name, result, top_k, save_file)
 
 def save_regression_result(name, result, top_k, save_file = None):
-    """Internal function to save a single regression result."""
+    """
+    Internal function of save_results() to save a single regression result.
+
+    Arguments:
+    - name (str): The name of the regression model.
+    - result (dict): The dictionary containing the results of the model.
+    - top_k (int): The number of top features used for model training.
+    - save_file (file object, optional): The file where the model results are written. Defaults to None.
+    """
 
     own_file = save_file is None
     if own_file:
@@ -401,8 +479,15 @@ def save_regression_result(name, result, top_k, save_file = None):
         print(f"\n • {name}_regression_results_{top_k}_features.txt saved to outputs/tables/model_training")
 
 def save_classification_result(name, result, top_k, save_file = None):
-    """Internal function to save a single classification result."""
+    """
+    Internal function of save_results() to save a single classification result.
 
+    Arguments:
+    - name (str): The name of the classification model.
+    - result (dict): The dictionary containing the results of the model.
+    - top_k (int): The number of top features used for model training.
+    - save_file (file object, optional): The file where the model results are written. Defaults to None.
+    """
     own_file = save_file is None
 
     if own_file:
@@ -443,7 +528,12 @@ def save_classification_result(name, result, top_k, save_file = None):
 
 def save_detailed_results_by_k(all_results, task='regression', k_values=None):
     """
-    Save detailed results for each k in a single text file.
+    Save detailed model results for each value of k to a single text file in 'outputs/tables/model_training'.
+
+    Arguments:
+    - all_results (dict): The model results for each value of k, returned by evaluate_k_values().
+    - task (str, optional): 'regression' or 'classification'. Defaults to 'regression'.
+    - k_values (list, optional): The values of k for which the results are saved. Defaults to all available values.
     """
     os.makedirs(f"{TABLES_DIR}/model_training", exist_ok=True)
     save_file = open(f"{TABLES_DIR}/model_training/{task}_detailed_results_by_k.txt","w")
@@ -468,7 +558,13 @@ def save_detailed_results_by_k(all_results, task='regression', k_values=None):
 
 def save_summary_of_metrics(results_df, task):
     """
-    Saves a summary of metrics from results_df.
+    Saves a summary of the main model performance metrics to
+    'outputs/tables/model_training/'.
+
+    Arguments:
+    - results_df (pd.DataFrame): DataFrame containing the main performance metrics
+      for all evaluated models, returned by evaluate_k_values().
+    - task (str): Type of machine learning task, either 'regression' or 'classification'.
     """
     os.makedirs(f"{TABLES_DIR}/model_training", exist_ok=True)
     save_file = open(f"{TABLES_DIR}/model_training/{task}_summary_of_metrics.txt", "w")
@@ -492,7 +588,15 @@ def save_summary_of_metrics(results_df, task):
 ###### SHAP ANALYSIS #####
 
 def save_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_n=10):
+    """
+    Saves the global SHAP feature importance rankings for each model to
+    'outputs/tables/SHAP_analysis'.
 
+    Arguments:
+    - global_mean_absolute_shap_rankings_dict (dict): Dictionary containing the global mean absolute SHAP
+      feature importance ranking DataFrame for each model, returned by local_and_global_shap_values_calculator() in SHAP_analysis.py
+    - top_n (int, optional): Number of top-ranked features to save for each model. Default set to 10.
+    """
     os.makedirs(f"{TABLES_DIR}/SHAP_analysis", exist_ok=True)
     save_file = open('outputs/tables/SHAP_analysis/global_shap_rankings.txt', 'w')
 
@@ -508,8 +612,19 @@ def save_global_shap_rankings(global_mean_absolute_shap_rankings_dict, top_n=10)
     save_file.close()
     print(f"\n • global_shap_rankings.txt saved to outputs/tables/SHAP_analysis")
 
-def save_rashomon_set(rashomon_set_dict, rashomon_best_score, rashomon_lowest_score_acceptable, task='regression', k_nbr_of_features_chosen=None, rashomon_threshold=None):
+def save_rashomon_set(rashomon_set_dict, rashomon_best_score, rashomon_lowest_score_acceptable, k_nbr_of_features_chosen, rashomon_threshold, task):
+    """
+    Saves Rashomon set composition and performance to 'outputs/tables/SHAP_analysis'. 
+    The first three arguments are returned by rashomon_set_builder().
 
+    Arguments:
+    - rashomon_set_dict: Dict of retained models and their results.
+    - rashomon_best_score: Best CV score among evaluated models.
+    - rashomon_lowest_score_acceptable: Minimum CV score for model inclusion.
+    - k_nbr_of_features_chosen: Number of features used for training. 
+    - rashomon_threshold: Max score gap from best for inclusion. 
+    - task: 'regression' or 'classification'.
+    """
     os.makedirs(f"{TABLES_DIR}/SHAP_analysis", exist_ok=True)
     save_file = open('outputs/tables/SHAP_analysis/rashomon_set.txt', 'w')
 
@@ -531,7 +646,10 @@ def save_rashomon_set(rashomon_set_dict, rashomon_best_score, rashomon_lowest_sc
     print(f"\n • rashomon_set.txt saved to outputs/tables/SHAP_analysis")
 
 def save_inter_model_concordance_agreement(concordance_dict):
-
+    """
+    Saves the global SHAP ranking concordance between models to `outputs/tables/SHAP_analysis'
+    It takes a dictionary of the agreement results as input, returned by inter_model_concordance_assessment().
+    """
     os.makedirs(f"{TABLES_DIR}/SHAP_analysis", exist_ok=True)
     save_file = open('outputs/tables/SHAP_analysis/inter_model_concordance_agreement.txt', 'w')
     print(f"\n{'='*100}", file = save_file)
@@ -544,7 +662,12 @@ def save_inter_model_concordance_agreement(concordance_dict):
     print(f"\n • inter_model_concordance_agreement.txt saved to outputs/tables/SHAP_analysis")
 
 def save_feature_agreement_stats(feature_agreement_stats_df):
+    """
+    Saves SHAP rank stats (mean, std, and individual model ranks) for every feature to 
+    'outputs/tables/SHAP_analysis'.
 
+    It takes a dataframe containing all feature agreement stats, returned by feature_agreement_stats().
+    """
     os.makedirs(f"{TABLES_DIR}/SHAP_analysis", exist_ok=True)
     save_file = open('outputs/tables/SHAP_analysis/feature_agreement_stats.txt', 'w')
 
@@ -608,7 +731,13 @@ def save_feature_agreement_stats(feature_agreement_stats_df):
     print(f"\n • feature_agreement_stats.txt saved to outputs/tables/SHAP_analysis")
 
 def save_intra_model_stability_assessment(intra_model_assessment_result):
+    """
+    Saves bootstrap-based SHAP stability results per model to
+    'outputs/tables/SHAP_analysis'.
 
+    Takes intra_model_assessment_result, returned by intra_model_stability_assessment(), 
+    a dictionary of DataFrames, one for each model, with stability metrics for each feature.
+    """
     os.makedirs(f"{TABLES_DIR}/SHAP_analysis", exist_ok=True)
     save_file = open('outputs/tables/SHAP_analysis/intra_model_stability_assessment.txt', 'w')
     
@@ -628,7 +757,12 @@ def save_intra_model_stability_assessment(intra_model_assessment_result):
     print(f"\n • intra_model_stability_assessment.txt saved to outputs/tables/SHAP_analysis")
 
 def save_feature_robustness_assessment(feature_robustness_result):
-
+    """
+    Saves feature-level robustness results (based on SHAP stability) to
+    'outputs/tables/SHAP_analysis'.
+    
+    Takes a DataFrame containing the robustness metrics, returned by assess_features_robustness().
+    """
     os.makedirs(f"{TABLES_DIR}/SHAP_analysis", exist_ok=True)
     save_file = open('outputs/tables/SHAP_analysis/feature_robustness_assessment.txt', 'w')   
     print(f"{'='*100}", file=save_file)

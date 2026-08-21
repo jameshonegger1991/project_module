@@ -8,15 +8,20 @@ warnings.filterwarnings("ignore")
 
 def check_datasets_availability():
     """
-    Load PISA 2022 datasets from local files.
+    Checks whether the required PISA 2022 student and school datasets are available
+    in the local data directory.
 
-    Users must manually download the files from Zenodo:
-    https://zenodo.org/records/13382904
+    User must manually download the files from Zenodo:
+        https://zenodo.org/records/13382904
+    
+        Expected files in "data" directory:
+        - CY08MSP_STU_QQQ.sav (1.97 GB)
+        - CY08MSP_SCH_QQQ.sav (18.53 MB)
 
-    Expected files in "data" directory:
-    - CY08MSP_STU_QQQ.sav (1.97 GB)
-    - CY08MSP_SCH_QQQ.sav (18.53 MB)
+    Returns:
+        bool: True if both required datasets are available, False otherwise.
     """
+    os.makedirs(DATA_DIR, exist_ok=True)
     student_file = os.path.join(DATA_DIR, "CY08MSP_STU_QQQ.sav")
     school_file = os.path.join(DATA_DIR, "CY08MSP_SCH_QQQ.sav")
 
@@ -45,9 +50,16 @@ def check_datasets_availability():
 
 def load_pisa_datasets():
     """
-    Load PISA 2022 datasets from local files.
-    """
+    Loads the PISA 2022 student and school datasets from local files. If presaved CSV
+    versions are available, they are loaded instead; otherwise, the original SPSS
+    files are loaded and converted to CSV for faster future access.
 
+    Returns:
+    - tuple: Two DataFrames containing the student and school datasets,
+    respectively. Returns (None, None) if the required source files are missing.
+
+    """
+    os.makedirs(DATA_DIR, exist_ok=True)
     student_sav = os.path.join(DATA_DIR, "CY08MSP_STU_QQQ.sav")
     school_sav = os.path.join(DATA_DIR, "CY08MSP_SCH_QQQ.sav")
     student_csv = os.path.join(DATA_DIR, "pisa_2022_student.csv")
@@ -81,15 +93,29 @@ def load_pisa_datasets():
 
 def filter_dataset_by_country(df: pd.DataFrame, country: str):
     """
-    Filters a DataFrame to include only records from a specified country.
+    Filters a DataFrame to retain only records from the specified country.
+
+    Arguments:
+    - df (pd.DataFrame): Dataset containing the country variable 'CNT'.
+    - country (str): Country name/identifier used to filter the dataset.
+
+    Returns:
+    - pd.DataFrame: Dataset containing only records from the specified country.
     """
     df_filtered_by_country = df.query("CNT == @country") 
     return df_filtered_by_country
 
 def merge_datasets_by_school(df_student: pd.DataFrame, df_school: pd.DataFrame):
     """
-    Merge student and school datasets (csv format) by school. 
-    It uses the common key 'CNTSCHID' (school ID).
+    Merges student and school datasets with the help of the common school identifier 'CNTSCHID'.
+    A left join is used to keep all student records.
+
+    Arguments:
+    - df_student (pd.DataFrame): Student-level dataset.
+    - df_school (pd.DataFrame): School-level dataset.
+
+    Returns:
+    - pd.DataFrame: Merged student and school dataset.
     """
     # left merged is required to conserve all student records that have a school ID
     # that does not appear in the school dataset.
@@ -98,9 +124,16 @@ def merge_datasets_by_school(df_student: pd.DataFrame, df_school: pd.DataFrame):
 
 def build_swiss_merged_dataset():
     """
-    Builds the merged dataset for Switzerland by loading PISA student and school data.
+    Builds the Swiss PISA dataset by:
+    - loading the student and school datasets,
+    - filtering both for Switzerland,
+    - merging them by school,
+    - and saving the resulting dataset as a CSV file.
     """
     df_student, df_school = load_pisa_datasets()
+
+    if df_student is None or df_school is None:
+        return
     
     print(f"Filtering student dataset for Switzerland...")
     df_student_swiss = filter_dataset_by_country(df_student, "Switzerland")
@@ -120,13 +153,21 @@ def build_swiss_merged_dataset():
    
 def reduced_swiss_dataset()-> pd.DataFrame:
     """
-    Loads the full Swiss merged dataset and reduces it to a predefined set of important features.
+    Loads the Swiss merged dataset and reduces it to the predefined set of features
+    required for the analysis. If the merged dataset does not exist, it is created
+    first. The reduced dataset is then saved as a CSV file.
+
+    Returns:
+    - pd.DataFrame: Reduced Swiss dataset containing the selected analysis features.
     """
     file_path = os.path.join(DATA_DIR, "swiss_merged_dataset.csv")
     
     if not os.path.exists(file_path):
         print(f"File not found: {file_path}")
         build_swiss_merged_dataset()
+
+        if not os.path.exists(file_path):
+            return None
     
     # Load the merged dataset
     df = pd.read_csv(file_path)

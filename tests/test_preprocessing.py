@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from src.config import MMINS_CAP, TARGET
+from src.config import MMINS_CAP, RANDOM_STATE, TARGET
 from src.dataset_cleaning_and_preprocessing import (
     add_derived_features_and_clean,
     create_eda_preprocessor,
@@ -184,7 +184,7 @@ def test_split_data_with_correct_test_size():
 
     df = pd.DataFrame({TARGET: np.random.uniform(200, 500, size = 20), "A": np.arange(20, dtype=float)})
 
-    X_train, X_test, y_train, y_test = split_data(df, test_size = 0.25, random_state=7)
+    X_train, X_test, y_train, y_test = split_data(df, test_size = 0.25, random_state=RANDOM_STATE)
 
     assert len(X_train) == 15
     assert len(X_test) == 5
@@ -198,8 +198,8 @@ def test_split_data_with_correct_test_size():
 def test_split_data_is_reproducible():
 
     df = pd.DataFrame({TARGET: np.random.uniform(200, 500, size = 20), "A": np.arange(20, dtype=float)})
-    first_split = split_data(df, test_size=0.20, random_state=7)
-    second_split = split_data(df, test_size=0.20, random_state=7)
+    first_split = split_data(df, test_size=0.20, random_state=RANDOM_STATE)
+    second_split = split_data(df, test_size=0.20, random_state=RANDOM_STATE)
 
     pd.testing.assert_frame_equal(first_split[0], second_split[0])  # X_train
     pd.testing.assert_frame_equal(first_split[1], second_split[1])  # X_test

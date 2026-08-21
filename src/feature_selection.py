@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 
 from src.config import (
     VARIANCE_THRESHOLD,
+    RANDOM_STATE,
 )
 from src.tables import (
     save_variance_threshold,
@@ -19,12 +20,20 @@ from src.tables import (
     save_anova,
     save_rfe,
     save_summarised_feature_rankings,
-    save_top_features,
 )
 
 def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESHOLD):
     """
-    Remove features below the variance threshold.
+    Filters out features with variance below the given threshold (fitted on training set only).
+
+    Args:
+        X_train: Training features.
+        feature_names: Column names matching X_train.
+        threshold: Minimum variance to keep a feature. Defaults to VARIANCE_THRESHOLD (= 0) to remove
+        only constant features (conservative approach).
+
+    Returns:
+        tuple: (variance_report_df, selected_feature_names, threshold_used)
     """
 
     if X_train.shape[1] != len(feature_names):
@@ -56,7 +65,15 @@ def apply_variance_threshold(X_train, feature_names, threshold = VARIANCE_THRESH
 
 def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
     """
-    Returns the Mutual Information (MI) ranking of features in a DataFrame. 
+    Calculates feature ranking using Mutual Information scores.
+
+    Args:
+        X_train, y_train: Training features (post-variance thresholding in this pipeline) and target.
+        feature_names: Column names matching X_train.
+        task: 'regression' or 'classification'. Default 'regression'.
+
+    Returns:
+        pd.DataFrame: Feature ranking sorted by MI scores.
     """
 
     # MI captures non-linear dependencies.
@@ -65,9 +82,9 @@ def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
     # - https://medium.com/@suvendulearns/decoding-mutual-information-mi-a-guide-for-machine-learning-practitioners-b0f0ca0b30c9  
 
     if task == 'regression':
-        mi_scores = mutual_info_regression(X_train, y_train, random_state=7) 
+        mi_scores = mutual_info_regression(X_train, y_train, random_state=RANDOM_STATE) 
     elif task == 'classification':
-        mi_scores = mutual_info_classif(X_train, y_train, random_state=7) 
+        mi_scores = mutual_info_classif(X_train, y_train, random_state=RANDOM_STATE) 
     else:
         raise ValueError("task must be 'regression' or 'classification'")
 
@@ -79,7 +96,15 @@ def apply_mutual_info(X_train, y_train, feature_names, task='regression'):
 
 def apply_ANOVA(X_train, y_train, feature_names, task ='regression'):
     """
-    Return a complete ranking (df) with feature names, F-scores, p-values, and their ranking.
+    Ranks features using ANOVA F-scores (and p-values).
+
+    Arguments:
+    - X_train, y_train: Training features (post-variance thresholding in this pipeline) and target.
+    - feature_names: Column names matching X_train.
+    - task: 'regression' or 'classification'. Default 'regression'.
+
+    Returns:
+    - pd.DataFrame: Feature ranking with F-scores and p-values.
     """
     
     if task == 'regression':
@@ -102,13 +127,22 @@ def apply_ANOVA(X_train, y_train, feature_names, task ='regression'):
 
 def apply_rfe(X_train, y_train, feature_names, task ='regression', step = 1):
     """
-    Performs RFE with a RandomForest estimator to return a complete feature ranking with feature names. 
+    Ranks features using Recursive Feature Elimination (RFE) with a Random Forest estimator.
+
+    Arguments:
+    - X_train, y_train: Training features (post-variance thresholding in this pipeline) and target.
+    - feature_names: Column names matching X_train.
+    - task: 'regression' or 'classification'. Default set to 'regression'.
+    - step: Number of features removed at each iteration. Default 1.
+
+    Returns:
+    - pd.DataFrame: Complete feature ranking from RFE.
     """
     
     if task == 'regression':
-        estimator = RandomForestRegressor(n_estimators=100, random_state=7)
+        estimator = RandomForestRegressor(n_estimators=100, random_state=RANDOM_STATE)
     elif task == 'classification':
-        estimator = RandomForestClassifier(n_estimators=100, random_state=7)
+        estimator = RandomForestClassifier(n_estimators=100, random_state=RANDOM_STATE)
     else:
         raise ValueError("task must be 'regression' or 'classification'")
     
@@ -125,7 +159,14 @@ def apply_rfe(X_train, y_train, feature_names, task ='regression', step = 1):
 
 def summarise_feature_rankings(ranking_dfs, method_names = None):
     """
-    Combines multiple feature rankings into a single final ranking.
+    Aggregates multiple feature rankings (from MI, ANOVA, RFE, etc.) into a final ranking using rank sum.
+
+    Arguments:
+    - ranking_dfs: List of DataFrames, each with feature rankings from a different method.
+    - method_names: Names for each method. Defaults to auto-generated names.
+
+    Returns:
+    - tuple: (combined_ranking_df, method_names_list)
     """
     
     if method_names is None:
@@ -150,7 +191,12 @@ def summarise_feature_rankings(ranking_dfs, method_names = None):
 
 def select_top_features(combined_rankings, k = 20):
     """
-    Picks the top 'k' features from the combined ranking and returns a list of their names.
+    Extracts the top k features from the aggregated ranking (output of summarise_feature_rankings())
+    and returns a tuple with the selected features (list) and the number of features selected (k).
+
+    Arguments:
+    - combined_rankings: Final ranking DataFrame.
+    - k: Number of top features to keep. Default 20.
     """
     
     if k > len(combined_rankings):
@@ -165,7 +211,7 @@ def select_top_features(combined_rankings, k = 20):
 
 def run_feature_selection_pipeline(X_train, X_test, y_train, feature_names, var_threshold = VARIANCE_THRESHOLD, task: str = 'regression'):
     """
-    Run the complete feature selection pipeline.
+    Executes the whole feature selection process and filters X_train/X_test with top features.
     """
     variance_threshold_df, selected_columns_var_thresh, threshold = apply_variance_threshold(X_train, feature_names, threshold = var_threshold)
     save_variance_threshold(variance_threshold_df, threshold, selected_columns_var_thresh, feature_names)

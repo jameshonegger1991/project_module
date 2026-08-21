@@ -1,6 +1,7 @@
 from sklearn.datasets import make_regression, make_classification
 import pandas as pd
 from sklearn.exceptions import UndefinedMetricWarning
+from src.config import RANDOM_STATE
 from src.model_training import run_models, evaluate_k_values
 import warnings
 
@@ -14,7 +15,7 @@ def test_run_models_regression():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     warnings.filterwarnings("ignore", message=".*fork.*")
 
-    X, y = make_regression(n_samples=100, n_features=10, random_state=7)
+    X, y = make_regression(n_samples=100, n_features=10, random_state=RANDOM_STATE)
     X_train, X_test = X[:80], X[80:]
     y_train, y_test = y[:80], y[80:]
     
@@ -40,7 +41,7 @@ def test_run_models_classification():
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     warnings.filterwarnings("ignore", message=".*fork.*")
 
-    X, y = make_classification(n_samples=100, n_features=10, n_classes=3, n_clusters_per_class=1, random_state=7)
+    X, y = make_classification(n_samples=100, n_features=10, n_classes=3, n_clusters_per_class=1, random_state=RANDOM_STATE)
     X_train, X_test = X[:80], X[80:]
     y_train, y_test = y[:80], y[80:]
     
@@ -61,7 +62,7 @@ def test_evaluate_k_values_regression():
     """
     Integration test for evaluate_k_values to verify DataFrame and dictionary aggregation across multiple k (for regression task)
     """
-    X, y = make_regression(n_samples=100, n_features=5, random_state=7)
+    X, y = make_regression(n_samples=100, n_features=5, random_state=RANDOM_STATE)
     X_train, X_test = X[:80], X[80:]
     y_train, y_test = y[:80], y[80:]
     
@@ -126,7 +127,7 @@ def test_run_models_invalid_task():
     """
     Ensure that passing an unsupported task returns an empty dictionary whithout errors.
     """
-    X, y = make_regression(n_samples=10, n_features=2, random_state=7)
+    X, y = make_regression(n_samples=10, n_features=2, random_state=RANDOM_STATE)
     results = run_models(X, y, X, y, model_names=['LR'], task='clustering')
     
     assert results == {}

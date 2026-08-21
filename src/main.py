@@ -1,7 +1,5 @@
 import os
-import shutil
 import pandas as pd
-import joblib
 
 from src.config import (
     MISSING_VALUES_THRESHOLD, 
@@ -10,8 +8,6 @@ from src.config import (
     OUTPUTS_DIR,
     TABLES_DIR,
     PLOTS_DIR,
-    MODELS_DIR,
-    SAVEDFILES_DIR,
 )
 from src.dataset_building import reduced_swiss_dataset
 from src.dataset_cleaning_and_preprocessing import (
@@ -28,16 +24,9 @@ from src.tables import (
     save_correlations_among_features,
     save_correlations_with_target,
     save_detailed_results_by_k,
-    save_rashomon_set,
-    save_results,
     save_summary_of_metrics,
-    save_global_shap_rankings,
     save_missing_values_report,
     save_descriptive_statistics,
-    save_inter_model_concordance_agreement,
-    save_feature_agreement_stats,
-    save_feature_robustness_assessment,
-    save_intra_model_stability_assessment,
 )
 
 from src.visualisations import (
@@ -57,12 +46,6 @@ from src.visualisations import (
 )
 from src.model_training import evaluate_k_values, run_models
 from src.SHAP_analysis import (
-    local_and_global_shap_values_calculator, 
-    rashomon_set_builder, 
-    inter_model_concordance_assessment, 
-    feature_agreement_stats,
-    intra_model_stability_assessment,
-    assess_features_robustness,
     run_complete_shap_analysis_and_classification,
 )
 
@@ -70,8 +53,6 @@ from src.utils import (
     print_files,
     display_visualisation,
 )
-
-
 
 
 if __name__ == "__main__":
@@ -122,7 +103,7 @@ if __name__ == "__main__":
     print("III. GLOBAL EXPLORATORY DATA ANALYSIS")
     print("*" * 100)
     
-    for dir_path in [OUTPUTS_DIR, TABLES_DIR, PLOTS_DIR, MODELS_DIR, SAVEDFILES_DIR]:
+    for dir_path in [OUTPUTS_DIR, TABLES_DIR, PLOTS_DIR]:
         os.makedirs(dir_path, exist_ok=True)
 
     # Data analysis: generate tables
@@ -331,7 +312,7 @@ if __name__ == "__main__":
     print_files("outputs/tables/SHAP_analysis/global_shap_rankings.txt")
 
     barplot_global_shap_rankings(global_shap_rankings, number_of_features_chosen_for_model_training)
-    shap_summary_plot(shap_values_for_all_models, X_test_k, feature_names_k)
+    shap_summary_plot(shap_values_for_all_models, feature_names_k)
 
     display_visualisation(f"{PLOTS_DIR}/SHAP_analysis/Global_SHAP_feature_importances_barplot.png")
     display_visualisation(f"{PLOTS_DIR}/SHAP_analysis/SHAP_summary_plot.png")

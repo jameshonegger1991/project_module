@@ -13,10 +13,23 @@ from sklearn.svm import SVC, SVR
 from src.feature_selection import select_top_features
 from sklearn.utils.class_weight import compute_sample_weight
 
+from src.config import(
+    RANDOM_STATE,
+)
 
 def run_models(X_train, y_train, X_test, y_test, model_names, task):
     """
-    Train and evaluate the regression or classification models.
+    Trains and evaluates models with hyperparameter tuning (Grid/RandomizedSearch).
+    Returns fitted models, predictions, metrics (train/test), best CV scores, and best parameters.
+
+    Arguments:
+    - X_train, y_train: Training features (after variance_threshold for the purpose of this project) and target. 
+    - X_test, y_test: Test features (after variance_threshold for the purpose of this project) and target.
+    - model_names: List of model names to run.
+    - task: 'regression' or 'classification'.
+
+    Returns:
+    - dict: Results for each model.
     """
     
     results = {}
@@ -31,7 +44,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 
                 pipeline = Pipeline([
                     ("scaler", StandardScaler()), 
-                    ("model", Lasso(random_state=7, max_iter=5000))
+                    ("model", Lasso(random_state=RANDOM_STATE, max_iter=5000))
                 ])
                 
                 model = GridSearchCV(
@@ -56,7 +69,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 }
 
                 # No scaler needed for RF
-                pipeline = Pipeline([("model", RandomForestRegressor(random_state=7, n_jobs=-1))])
+                pipeline = Pipeline([("model", RandomForestRegressor(random_state=RANDOM_STATE, n_jobs=-1))])
                 model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=0) # cv = 3 due to limited computational power
                 is_lasso = False
                 
@@ -73,7 +86,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     'model__reg_lambda': [1.0, 2.0]
                 }
 
-                pipeline = Pipeline([("model", XGBRegressor(random_state=7, n_jobs=-1))])
+                pipeline = Pipeline([("model", XGBRegressor(random_state=RANDOM_STATE, n_jobs=-1))])
                 model = GridSearchCV(pipeline, parameters, cv=3, scoring='r2', n_jobs=-1, verbose=0)
                 is_lasso = False
                 
@@ -163,7 +176,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     ("scaler", StandardScaler()),
                     ("classifier", LogisticRegression(
                         max_iter=2000,
-                        random_state=7,
+                        random_state=RANDOM_STATE,
                     ))
                 ])
                 #Bug fixed with a list of dic for parameters (as lbfgs doesn't support l1)
@@ -203,7 +216,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     'model__ccp_alpha': [0.001, 0.002]
                 }
 
-                pipeline = Pipeline([("model", RandomForestClassifier(random_state=7, n_jobs=-1))])
+                pipeline = Pipeline([("model", RandomForestClassifier(random_state=RANDOM_STATE, n_jobs=-1))])
 
                 model = RandomizedSearchCV(
                     pipeline,
@@ -213,7 +226,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     scoring='f1_macro',  # Important for imbalanced classes
                     n_jobs=-1,
                     verbose=0,
-                    random_state=7
+                    random_state=RANDOM_STATE
                 )
                 
             elif name == "XGBoost":
@@ -238,7 +251,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                 }
 
                 pipeline = Pipeline([
-                    ("model", XGBClassifier(random_state=7, n_jobs=-1, eval_metric='mlogloss'))
+                    ("model", XGBClassifier(random_state=RANDOM_STATE, n_jobs=-1, eval_metric='mlogloss'))
                 ])
 
                 model = RandomizedSearchCV(
@@ -249,7 +262,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     scoring='f1_macro',
                     n_jobs=-1,
                     verbose=0,
-                    random_state=7
+                    random_state=RANDOM_STATE
                 )
                 
             elif name == "SVC":
@@ -265,7 +278,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
 
                 pipeline = Pipeline([
                     ("scaler", StandardScaler()),  # SVC is sensitive to feature scaling
-                    ("model", SVC(random_state=7, probability=True))
+                    ("model", SVC(random_state=RANDOM_STATE, probability=True))
                 ])
 
                 model = RandomizedSearchCV(
@@ -276,7 +289,7 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
                     scoring='f1_macro',
                     n_jobs=-1,
                     verbose=0,
-                    random_state=7
+                    random_state=RANDOM_STATE
                 )
                 
             else:
@@ -346,6 +359,19 @@ def run_models(X_train, y_train, X_test, y_test, model_names, task):
 def evaluate_k_values(X_train, y_train, X_test, y_test, final_features_ranking, feature_names, model_names, task, k_values=[5, 10, 15, 20]):
     """
     Evaluate models for different values of k (number of features) and return a DataFrame + a dictionary with all results.
+    For each k, it selects the top k features and calls run_models() internally to get results.
+
+    Arguments:
+    - X_train, y_train, X_test, y_test: Train/test data.
+    - final_features_ranking: Ranked list of features (used for ordering).
+    - feature_names: All feature names matching the data columns.
+    - model_names: List of models to evaluate.
+    - task: 'regression' or 'classification'.
+    - k_values: List of feature counts to test. Default [5, 10, 15, 20].
+
+    Returns:
+    -  tuple: Summary DataFrame of model performance across k values and a dictionary 
+    containing the detailed results for each k.
     """
     all_results = {}
     rows = []
