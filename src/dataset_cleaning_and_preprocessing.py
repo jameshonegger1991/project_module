@@ -4,7 +4,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import KNNImputer, SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from src.config import (
     CATEGORICAL_COLS,
@@ -185,9 +185,8 @@ def create_imputer_preprocessor(X_train):
         most-frequent imputation and one-hot encoding to categorical features, and
         most-frequent imputation to ordinal features.
     """
-    numeric_cols, categorical_cols, ordinal_cols = get_feature_groups(X_train)
+    _, categorical_cols, ordinal_cols = get_feature_groups(X_train)
 
-    numerical_transformer = Pipeline(steps=[("imputer", KNNImputer(n_neighbors=KNN_NEIGHBORS))])
     categorical_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
         ("encoder", OneHotEncoder(drop="first", handle_unknown="ignore", sparse_output=False)),
@@ -196,7 +195,6 @@ def create_imputer_preprocessor(X_train):
 
     return ColumnTransformer(
         transformers=[
-            ("num", numerical_transformer, numeric_cols),
             ("cat", categorical_transformer, categorical_cols),
             ("ord", ordinal_transformer, ordinal_cols),
         ]
@@ -216,9 +214,8 @@ def create_eda_preprocessor(X_train):
     Returns:
         ColumnTransformer: Preprocessor for EDA.
     """
-    numeric_cols, categorical_cols, ordinal_cols = get_feature_groups(X_train)
+    _, categorical_cols, ordinal_cols = get_feature_groups(X_train)
 
-    numerical_transformer = Pipeline(steps=[("imputer", KNNImputer(n_neighbors=KNN_NEIGHBORS))])
     categorical_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
         ("encoder", OneHotEncoder(drop=None, handle_unknown="ignore", sparse_output=False)),
@@ -227,7 +224,6 @@ def create_eda_preprocessor(X_train):
 
     return ColumnTransformer(
         transformers=[
-            ("num", numerical_transformer, numeric_cols),
             ("cat", categorical_transformer, categorical_cols),
             ("ord", ordinal_transformer, ordinal_cols),
         ]
@@ -250,6 +246,42 @@ def create_imputed_dataframe(X_imputed: np.ndarray, preprocessor: ColumnTransfor
     result[TARGET] = y
     return result.reset_index(drop=True)
 
+def numerical_knn_imputation_with_scaling(X_train_num, X_test_num, n_neighbors=KNN_NEIGHBORS):
+    """
+    Impute numerical features with KNN after scaling, and then restore them to original scale.s
+    """
+    scaler = StandardScaler()
+
+    X_train_scaled = scaler.fit_transform(X_train_num)
+    X_test_scaled = scaler.transform(X_test_num)
+    imputer = KNNImputer(n_neighbors=n_neighbors)
+
+    X_train_imputed_scaled = imputer.fit_transform(X_train_scaled)
+    X_test_imputed_scaled = imputer.transform(X_test_scaled)
+
+    X_train_imputed = scaler.inverse_transform(X_train_imputed_scaled)
+    X_test_imputed = scaler.inverse_transform(X_test_imputed_scaled)
+
+    return X_train_imputed, X_test_imputed
+
+def preprocessing_training_data_for_EDA(X_train):
+    """
+    Impute predictive features with appropriate related methods and return combined array with feature names.
+    """
+    numeric_cols, _, _ = get_feature_groups(X_train)
+
+    X_train_num_imputed, _ = numerical_knn_imputation_with_scaling(X_train[numeric_cols], X_train[numeric_cols], n_neighbors=KNN_NEIGHBORS)
+    numeric_feature_names = [f"num__{col}" for col in numeric_cols]
+
+    eda_preprocessor = create_eda_preprocessor(X_train)
+    X_train_cat_ord = (eda_preprocessor.fit_transform(X_train))
+    cat_ord_feature_names = (eda_preprocessor.get_feature_names_out().tolist())
+
+    X_train_imputed_for_eda = np.hstack([X_train_num_imputed, X_train_cat_ord])
+    feature_names = (numeric_feature_names+ cat_ord_feature_names)
+
+    return X_train_imputed_for_eda, feature_names
+
 def run_preprocessing_pipeline(df, missing_values_threshold = MISSING_VALUES_THRESHOLD):
     """
     Runs the full preprocessing pipeline: cleaning, split, column filtering,
@@ -268,12 +300,17 @@ def run_preprocessing_pipeline(df, missing_values_threshold = MISSING_VALUES_THR
     X_train, X_test, y_train, y_test = split_data(df_preprocessed)
     X_train, X_test, removed_missing_columns = filter_columns_from_training_data(X_train, X_test, missing_values_threshold)
 
-    imputer_preprocessor = create_imputer_preprocessor(X_train)
-    X_train_imputed = imputer_preprocessor.fit_transform(X_train)
-    X_test_imputed = imputer_preprocessor.transform(X_test)
+    numeric_cols, _, _ = get_feature_groups(X_train)
+    X_train_num_imputed, X_test_num_imputed = numerical_knn_imputation_with_scaling(X_train[numeric_cols], X_test[numeric_cols], n_neighbors=KNN_NEIGHBORS)
+    numeric_imputed_feature_names = [f"num__{col}" for col in numeric_cols]
 
-    all_imputed_feature_names = imputer_preprocessor.get_feature_names_out().tolist()
-    numeric_imputed_feature_names = [name for name in all_imputed_feature_names if name.startswith("num__")]
+    imputer_preprocessor = create_imputer_preprocessor(X_train)
+    X_train_cat_ord = imputer_preprocessor.fit_transform(X_train)
+    X_test_cat_ord = imputer_preprocessor.transform(X_test)
+    cat_ord_feature_names = imputer_preprocessor.get_feature_names_out().tolist()
+    X_train_imputed = np.hstack([X_train_num_imputed, X_train_cat_ord])
+    X_test_imputed = np.hstack([X_test_num_imputed, X_test_cat_ord])
+    all_imputed_feature_names = numeric_imputed_feature_names + cat_ord_feature_names
 
     return (
         X_train_imputed,
