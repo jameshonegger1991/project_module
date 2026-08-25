@@ -8,11 +8,13 @@ from src.config import (
     OUTPUTS_DIR,
     TABLES_DIR,
     PLOTS_DIR,
+    TARGET,
 )
 from src.dataset_building import reduced_swiss_dataset
 from src.dataset_cleaning_and_preprocessing import (
     create_eda_preprocessor,
     create_imputed_dataframe,
+    preprocessing_training_data_for_EDA,
     run_preprocessing_pipeline,
 )
 
@@ -135,14 +137,11 @@ if __name__ == "__main__":
     print("IV. EXPLORATORY DATA ANALYSIS ON TRAIN-SET AFTER IMPUTATION")
     print("*" * 100)
 
-    eda_preprocessor = create_eda_preprocessor(X_train)
-    X_train_imputed_for_eda = eda_preprocessor.fit_transform(X_train)
+    X_train_imputed_for_eda, eda_feature_names = preprocessing_training_data_for_EDA(X_train)
+    df_train_set_for_eda = pd.DataFrame(X_train_imputed_for_eda, columns=eda_feature_names,index=y_train.index)
 
-    df_train_set_for_eda = create_imputed_dataframe(
-    X_train_imputed_for_eda,
-    eda_preprocessor,
-    y_train,
-    )
+    df_train_set_for_eda[TARGET] = y_train
+    df_train_set_for_eda = df_train_set_for_eda.reset_index(drop=True)
 
     # Data analysis: generate and save correlation computations
     save_spearman_correlation_matrix(df_train_set_for_eda, "Spearman Correlation Matrix (Train set after imputation)")
