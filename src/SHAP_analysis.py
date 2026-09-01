@@ -349,36 +349,37 @@ def assess_features_robustness(global_rankings_dict, intra_model_assessment_resu
 
     cv_scores_df = pd.DataFrame(cv_scores)
     
-    # Mean of CV per feature
-    global_cv_scores_df = cv_scores_df.groupby('Feature')['Coefficient of Variation'].mean().reset_index()
+    # Maximum coefficient of variation per feature across all models. This is a stricter threshold 
+    # than the mean coefficient of variation across all models.
+    global_cv_scores_df = cv_scores_df.groupby('Feature')['Coefficient of Variation'].max().reset_index()
 
     final_classifications = []
     
     for _, row in global_cv_scores_df.iterrows():
         feature = row['Feature']
-        mean_cv = row['Coefficient of Variation']
+        max_cv = row['Coefficient of Variation']
         mean_shap = shap_dict.get(feature, 0.0)
         
-        stable = mean_cv <= 0.15
+        stable = max_cv <= 0.15
         in_top_k = feature in MCR_intersection
         retained = stable and in_top_k
         
         final_classifications.append({
             'Feature': feature,
             'Mean Absolute SHAP': mean_shap,
-            'Mean CV': mean_cv,
-            'CV stable': 'Yes' if stable else 'No',
-            f"In Top-{top_k} intersection": 'Yes' if in_top_k else 'No',
-            'Retained': 'Yes' if retained else 'No'
+            'Max Coefficient of Variation': max_cv,
+            'Feature stability status': 'Stable' if stable else 'Unstable',
+            f"In Top-{top_k} intersection (inter-model agreement)": 'Yes' if in_top_k else 'No',
+            'Final categorisation': 'Robust' if retained else 'Not robust'
         })
 
     final_classifications_df = pd.DataFrame(final_classifications)
     
-    final_classifications_df['Retained_Sort'] = final_classifications_df['Retained'].apply(lambda x: 0 if x == 'Yes' else 1)
+    final_classifications_df['Robustness_Sort'] = final_classifications_df['Final categorisation'].apply(lambda x: 0 if x == 'Robust' else 1)
     final_classifications_df = final_classifications_df.sort_values(
-        by=['Retained_Sort', 'Mean Absolute SHAP'], 
+        by=['Robustness_Sort', 'Mean Absolute SHAP'], 
         ascending=[True, False]
-    ).drop(columns=['Retained_Sort']).reset_index(drop=True)
+    ).drop(columns=['Robustness_Sort']).reset_index(drop=True)
     final_classifications_df.index = final_classifications_df.index + 1
     
     return final_classifications_df
