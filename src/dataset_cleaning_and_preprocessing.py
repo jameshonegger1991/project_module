@@ -175,7 +175,7 @@ def get_feature_groups(X_train):
 def create_imputer_preprocessor(X_train):
     """
     Creates a ColumnTransformer that applies the appropriate preprocessing steps
-    to numerical, categorical, and ordinal features
+    to categorical, and ordinal features
 
     Arguments:
         X_train: Training features (to identify feature groups).

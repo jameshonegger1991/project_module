@@ -164,21 +164,21 @@ def test_feature_robustness_assessment():
 
     row_a = result[result['Feature'] == 'A'].iloc[0]
 
-    assert row_a['Retained'] == 'Yes'
-    assert row_a['CV stable'] == 'Yes'
-    assert row_a['In Top-2 intersection'] == 'Yes'
+    assert row_a['Final categorisation'] == 'Robust'
+    assert row_a['Feature stability status'] == 'Stable'
+    assert row_a['In Top-2 intersection (inter-model agreement)'] == 'Yes'
     assert row_a['Mean Absolute SHAP'] == 3.5
 
     row_b = result[result['Feature'] == 'B'].iloc[0]
 
-    assert row_b['Retained'] == 'No'
-    assert row_b['CV stable'] == 'Yes'
-    assert row_b['In Top-2 intersection'] == 'No'
-    assert row_b['Mean Absolute SHAP'] == 2.0 
+    assert row_b['Final categorisation'] == 'Not robust'
+    assert row_b['Feature stability status'] == 'Stable'
+    assert row_b['In Top-2 intersection (inter-model agreement)'] == 'No'
+    assert row_b['Mean Absolute SHAP'] == 2.0
 
     row_c = result[result['Feature'] == 'C'].iloc[0]
 
-    assert row_c['Retained'] == 'No'
-    assert row_c['CV stable'] == 'No'
-    assert row_c['In Top-2 intersection'] == 'No'
+    assert row_c['Final categorisation'] == 'Not robust'
+    assert row_c['Feature stability status'] == 'Unstable'
+    assert row_c['In Top-2 intersection (inter-model agreement)'] == 'No'
     assert row_c['Mean Absolute SHAP'] == 2.0

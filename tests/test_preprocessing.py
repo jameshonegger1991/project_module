@@ -24,7 +24,7 @@ def create_minimal_raw_dataframe() -> pd.DataFrame:
 
         {
             TARGET: [500.0, 550.0, 600.0, 450.0],
-            "CNTSCHID": [800063, 800071, 800080, 800080],
+            "CNTSCHID": [800063, 800063, 800080, 800080],
             "CNTSTUID": [800001, 800002, 800283, 800431],
             "ESCS": [0.0, 1.0, -1.0, 1.0],
             "ST059Q01TA": [5.0, 4.0, 10.0, 2.0],
@@ -73,14 +73,14 @@ def test_add_derived_features_creates_mmins():
     df = create_minimal_raw_dataframe()
     result = add_derived_features_and_clean(df)
     expected_mmins = pd.Series([225.0, 200.0, 550.0, 60.0], name="MMINS")
-    expected_mmins.value_counts(sort=False).eq(result.value_counts(sort=False)).all() #REFERENCE: https://stackoverflow.com/q/75133025, Posted by the phoenix, Retrieved 2026-07-28, License - CC BY-SA 4.0
+    assert expected_mmins.value_counts(sort=False).eq(result.value_counts(sort=False)).all() #REFERENCE: https://stackoverflow.com/q/75133025, Posted by the phoenix, Retrieved 2026-07-28, License - CC BY-SA 4.0
 
 def test_add_derived_features_creates_school_mean_escs():
 
     df = create_minimal_raw_dataframe()
     result = add_derived_features_and_clean(df)
     expected = pd.Series([0.5, 0.5, 0.0, 0.0], name="MEAN_ESCS")
-    expected.value_counts(sort=False).eq(result.value_counts(sort=False)).all()
+    pd.testing.assert_series_equal(result["MEAN_ESCS"].reset_index(drop=True), expected)
 
 def test_add_derived_features_removes_source_and_identifier_columns():
 

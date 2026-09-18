@@ -91,7 +91,7 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
                 scaler = best_estimator.named_steps.get('scaler', None)
                 X_train_for_shap = scaler.transform(X_train) if scaler else X_train
                 X_test_for_shap = scaler.transform(X_test) if scaler else X_test
-                np.random.seed(7)
+                np.random.seed(RANDOM_STATE)
                 explainer = shap.LinearExplainer(best_estimator.named_steps['model'], X_train_for_shap, feature_perturbation="correlation_dependent") # helps keeping realism in profile computation by computing "smart" conditional expectations. SOURCE: https://shap.readthedocs.io/en/latest/example_notebooks/tabular_examples/linear_models/Math%20behind%20LinearExplainer%20with%20correlation%20feature%20perturbation.html 
                 shap_values = explainer.shap_values(X_test_for_shap)
 
@@ -120,7 +120,7 @@ def local_and_global_shap_values_calculator(rashomon_set_dict, X_train, X_test, 
                 X_train_for_shap= scaler.transform(X_train) if scaler else X_train
                 X_test_for_shap = scaler.transform(X_test_sample) if scaler else X_test_sample
 
-                np.random.seed(7)
+                np.random.seed(RANDOM_STATE)
                 background_sample = shap.kmeans(X_train_for_shap, 50)
                 explainer = shap.KernelExplainer(best_estimator.named_steps['model'].predict, background_sample)
                 shap_values = explainer.shap_values(X_test_for_shap)
