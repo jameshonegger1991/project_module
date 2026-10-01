@@ -3,4 +3,5 @@ venv/
 env/
 data/
 outputs/
-.DS_Store
+.DS_Store.vscode/
+.vscode/
