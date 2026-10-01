@@ -26,7 +26,7 @@ def check_overfitting_regression(train_r2, cv_score):
     and the calculated gap.
     """
 
-    # Overfitting check based on check based on the gap between Train R² and Cross-Validation R². 
+    # Overfitting check based on the gap between Train R² and Cross-Validation R². 
     # Inspiration for the heuristic: https://datascience.stackexchange.com/questions/77298/how-many-ways-are-there-to-check-model-overfitting)
     
     gap = train_r2 - cv_score
@@ -63,8 +63,8 @@ def check_overfitting_classification(train_f1, cv_f1):
 
     # Overfitting check based on the gap between Train F1 and Cross-Validation F1.
     # In that situation, the threshold is stricter (0.05) than regression (0.10) because classification 
-    # metrics are strictly bounded between 0 and 1. This means that in such situation, a 5% drop 
-    # represents a critical loss of operational predictive power.
+    # metrics are strictly bounded between 0 and 1 (no negative values possible). In this context, a 0.05 absolute drop 
+    # is considered a noticeable deterioration in classification performance.
     gap = train_f1 - cv_f1
     
     if gap > 0.05:
